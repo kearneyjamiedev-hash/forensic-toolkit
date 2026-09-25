@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Digital Forensic File Analyzer</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+</head>
+
+<body>
+
+<header class="topbar">
+    <div>
+        <div class="eyebrow">
+            DIGITAL FORENSICS // LOCAL ANALYSIS
+        </div>
+
+        <h1>File Analyzer</h1>
+    </div>
+
+    <div class="status">
+        <span class="status-dot"></span>
+        LOCAL ENGINE
+    </div>
+</header>
+
+
+<main>
+
+    <section class="hero panel">
+
+        <div class="hero-copy">
+            <h2>Analyse Evidence</h2>
+
+            <p>
+                Extract forensic properties, calculate integrity
+                hashes, validate file signatures and inspect
+                embedded metadata.
+            </p>
+        </div>
+
+        <label
+            class="drop-zone"
+            id="drop-zone"
+        >
+            <input
+                type="file"
+                id="file-input"
+                hidden
+            >
+
+            <span class="upload-icon">+</span>
+
+            <strong>Select evidence file</strong>
+
+            <span>
+                or drag and drop a file here
+            </span>
+        </label>
+
+        <div
+            id="selected-file"
+            class="selected-file"
+        ></div>
+
+        <button
+            id="analyse-button"
+            class="primary-button"
+            disabled
+        >
+            ANALYSE FILE
+        </button>
+
+    </section>
+
+
+    <section
+        id="loading"
+        class="panel hidden"
+    >
+        <div class="loader"></div>
+
+        <span>Analysing evidence...</span>
+    </section>
+
+
+    <section
+        id="results"
+        class="hidden"
+    >
+
+        <div class="section-heading">
+            <div>
+                <div class="eyebrow">
+                    ANALYSIS RESULTS
+                </div>
+
+                <h2 id="result-filename"></h2>
+            </div>
+
+            <div
+                id="analysis-time"
+                class="analysis-time"
+            ></div>
+        </div>
+
+
+        <div
+            id="warnings"
+            class="warnings"
+        ></div>
+
+
+        <div
+            id="overview-grid"
+            class="overview-grid"
+        ></div>
+
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">
+                        FILE IDENTIFICATION
+                    </div>
+
+                    <h3>Signature Analysis</h3>
+                </div>
+
+                <span
+                    id="signature-status"
+                    class="badge"
+                ></span>
+            </div>
+
+            <div
+                id="signature-content"
+                class="property-grid"
+            ></div>
+        </section>
+
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">
+                        INTEGRITY
+                    </div>
+
+                    <h3>Cryptographic Hashes</h3>
+                </div>
+            </div>
+
+            <div
+                id="hashes"
+                class="hash-list"
+            ></div>
+        </section>
+
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">
+                        FILESYSTEM CONTEXT
+                    </div>
+
+                    <h3>Evidence Copy</h3>
+                </div>
+            </div>
+
+            <div
+                id="filesystem-note"
+                class="info-box"
+            ></div>
+
+            <div
+                id="filesystem"
+                class="property-grid"
+            ></div>
+        </section>
+
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">
+                        EMBEDDED EVIDENCE
+                    </div>
+
+                    <h3>Metadata</h3>
+                </div>
+
+                <span
+                    id="metadata-count"
+                    class="badge"
+                ></span>
+            </div>
+
+            <div id="metadata"></div>
+        </section>
+
+    </section>
+
+</main>
+
+
+<footer>
+    <strong>Digital Forensic File Analyzer</strong>
+
+    <span>
+        Metadata and timestamps should be interpreted as evidence,
+        not treated as independently verified facts.
+    </span>
+</footer>
+
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>

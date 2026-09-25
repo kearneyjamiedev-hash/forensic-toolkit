@@ -12,3 +12,7 @@ data/uploads/*
 
 Thumbs.db
 .DS_Stores
+
+data/forensics.db
+data/forensics.db-shm
+data/forensics.db-wal

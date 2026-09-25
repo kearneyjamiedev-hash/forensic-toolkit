@@ -1,0 +1,24 @@
+Portfolio demonstration evidence.
+
+URL:
+https://example.com/demo-login
+
+Email:
+analyst@example.com
+
+IPv4:
+192.168.10.42
+
+Windows path:
+C:\Users\DemoAnalyst\Documents\case.txt
+
+Unix path:
+/home/demo/evidence/report.txt
+
+Registry:
+HKCU\Software\ForensicDemo
+
+Command example:
+powershell.exe -ExecutionPolicy Bypass -File demo.ps1
+
+These values are intentionally harmless demonstration data.

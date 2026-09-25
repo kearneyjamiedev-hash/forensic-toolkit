@@ -9,7 +9,10 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 
 STATIC_DIR = BASE_DIR / "static"
 
-EXIFTOOL_PATH = os.getenv("EXIFTOOL_PATH", "exiftool")
+EXIFTOOL_PATH = os.getenv(
+    "EXIFTOOL_PATH",
+    str(BASE_DIR / "tools" / "exiftool" / "exiftool.exe")
+)
 
 MAX_UPLOAD_SIZE = 250 * 1024 * 1024  # 250 MB
 

@@ -14,6 +14,7 @@ EXIFTOOL_PATH = os.getenv(
     str(BASE_DIR / "tools" / "exiftool" / "exiftool.exe")
 )
 
+
 MAX_UPLOAD_SIZE = 250 * 1024 * 1024  # 250 MB
 
 

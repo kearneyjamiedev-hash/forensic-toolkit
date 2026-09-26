@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Full Forensic Examination</title>
+<link href="/static/css/styles.css" rel="stylesheet"/>
+</head>
+<body>
+<header class="topbar"><div class="brand"><div class="eyebrow">Digital Forensic Analysis</div><h1>Full Forensic Examination</h1></div><div class="topbar-actions"><a class="nav-link" href="/">Dashboard</a><a class="nav-link" href="/local">Acquire Evidence</a><div class="status"><span class="status-dot"></span> Full analysis</div></div></header>
+<main>
+<!-- =========================================================
+         FILE UPLOAD
+         ========================================================= -->
+<section class="hero panel">
+<div class="hero-copy">
+<span class="section-label">Full forensic examination</span>
+<h2>Analyse a file in depth</h2>
+<p>Perform a complete static forensic examination including file identification, integrity hashes, filesystem context, timeline reconstruction, artefacts, metadata and format-specific analysis.</p>
+<div class="privacy-note">
+                Files are analysed locally and are not uploaded to an
+                external service.
+            </div>
+</div>
+<div class="upload-area">
+<label class="drop-zone" id="drop-zone">
+<input hidden="" id="file-input" type="file"/>
+<span class="upload-icon">+</span>
+<strong>Select a file</strong>
+<span>
+                    or drag and drop it here
+                </span>
+</label>
+<div class="selected-file" id="selected-file"></div>
+<button class="primary-button" disabled="" id="analyse-button">
+                Analyse file
+            </button>
+</div>
+</section>
+
+<!-- =========================================================
+     PORTFOLIO / DEMO MODE
+     ========================================================= -->
+<section class="panel demo-panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                Portfolio mode
+            </div>
+<h3>
+                Safe demonstration evidence
+            </h3>
+<p class="panel-description">
+                Load generated mock evidence through the real
+                forensic-analysis pipeline without exposing
+                real investigation files.
+            </p>
+</div>
+<span class="badge good">
+            Safe demo data
+        </span>
+</div>
+<div class="demo-controls">
+<div class="demo-select-group">
+<label for="demo-sample-select">
+                Demonstration scenario
+            </label>
+<select class="demo-select" id="demo-sample-select">
+<option value="">
+                    Loading demonstration evidence...
+                </option>
+</select>
+</div>
+<button class="primary-button" disabled="" id="demo-load-button">
+            Load demo evidence
+        </button>
+<button class="secondary-button" disabled="" id="demo-download-button">
+            Download sample
+        </button>
+</div>
+<div class="demo-description" id="demo-description">
+        Select a scenario to see what it demonstrates.
+    </div>
+</section>
+
+
+<!-- =========================================================
+         LOADING
+         ========================================================= -->
+<section class="panel hidden loading-panel" id="loading">
+<div class="loader"></div>
+<div>
+<strong>Analysing file</strong>
+<span>Extracting forensic information...</span>
+</div>
+</section>
+<!-- =========================================================
+         RESULTS
+         ========================================================= -->
+<section class="hidden" id="results">
+<div class="section-heading">
+<div>
+<div class="eyebrow">
+                    Analysis results
+                </div>
+<h2 id="result-filename"></h2>
+</div>
+<div class="analysis-time" id="analysis-time"></div>
+</div>
+<div class="warnings" id="warnings"></div>
+<!-- =====================================================
+             OVERVIEW
+             ===================================================== -->
+<div class="overview-grid" id="overview-grid"></div>
+<!-- =====================================================
+             FILE SIGNATURE
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        File identification
+                    </div>
+<h3>Signature analysis</h3>
+<p class="panel-description">
+                        Compares the filename extension with the
+                        detected file structure and signature.
+                    </p>
+</div>
+<span class="badge" id="signature-status"></span>
+</div>
+<div class="property-grid" id="signature-content"></div>
+</section>
+<!-- =====================================================
+             INTEGRITY
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Integrity
+                    </div>
+<h3>
+                        Cryptographic hashes
+                    </h3>
+<p class="panel-description">
+                        SHA-256 is used as the primary evidence
+                        integrity hash. Re-select the file later
+                        to verify that it still matches the
+                        original analysis.
+                    </p>
+</div>
+</div>
+<div class="hash-list" id="hashes"></div>
+<div class="verification-area">
+<input hidden="" id="verify-file-input" type="file"/>
+<button class="secondary-button" disabled="" id="verify-button">
+                    Verify file
+                </button>
+<div class="verification-result hidden" id="verification-result"></div>
+</div>
+</section>
+<!-- =====================================================
+             FILESYSTEM
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Filesystem context
+                    </div>
+<h3>Evidence copy</h3>
+<p class="panel-description">
+                        Filesystem information associated with the
+                        copy currently being analysed.
+                    </p>
+</div>
+</div>
+<div class="info-box" id="filesystem-note"></div>
+<div class="property-grid" id="filesystem"></div>
+</section>
+<!-- =====================================================
+             TIMELINE
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Timeline
+                    </div>
+<h3>Forensic timeline</h3>
+<p class="panel-description">
+                        Timestamps from filesystem and embedded metadata
+                        are collected into a common chronological view.
+                        UTC conversion is only performed where timezone
+                        information is available.
+                    </p>
+</div>
+<span class="badge" id="timeline-count"></span>
+</div>
+<div class="timeline-summary" id="timeline-summary"></div>
+<div class="timeline-observations" id="timeline-observations"></div>
+<div class="timeline" id="timeline"></div>
+</section>
+<!-- =====================================================
+             INTERESTING ARTEFACTS
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Extracted content
+                    </div>
+<h3>
+                        Interesting artefacts
+                    </h3>
+<p class="panel-description">
+                        Readable strings are inspected for values
+                        that may be useful during an investigation.
+                        Their presence does not imply malicious
+                        activity.
+                    </p>
+</div>
+<span class="badge" id="artefact-count"></span>
+</div>
+<div class="info-box" id="artefact-note"></div>
+<div class="artefacts" id="artefacts"></div>
+</section>
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                Format analysis
+            </div>
+<h3>
+                File structure
+            </h3>
+<p class="panel-description">
+                Format-specific structural analysis is
+                performed without opening or executing
+                the analysed file.
+            </p>
+</div>
+<span class="badge" id="format-analysis-status"></span>
+</div>
+<div class="format-analysis" id="format-analysis"></div>
+</section>
+<!-- =====================================================
+             METADATA
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Metadata
+                    </div>
+<h3>Extracted metadata</h3>
+<p class="panel-description">
+                        Metadata is grouped by source and type to help
+                        distinguish filesystem, document, image and
+                        application information.
+                    </p>
+</div>
+<span class="badge" id="metadata-count"></span>
+</div>
+<div id="metadata"></div>
+</section>
+<!-- =====================================================
+             REPORTS
+             ===================================================== -->
+<section class="panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                        Reports
+                    </div>
+<h3>
+                        Export analysis
+                    </h3>
+<p class="panel-description">
+                        Export the persisted analysis in
+                        machine-readable or human-readable formats.
+                        Reports retain the original SHA-256 evidence
+                        baseline.
+                    </p>
+</div>
+</div>
+<div class="report-actions">
+<button class="secondary-button report-button" data-report-format="json" disabled="">
+                    JSON report
+                </button>
+<button class="secondary-button report-button" data-report-format="timeline.csv" disabled="">
+                    Timeline CSV
+                </button>
+<button class="secondary-button report-button" data-report-format="artefacts.csv" disabled="">
+                    Artefacts CSV
+                </button>
+<button class="primary-button report-button" data-report-format="html" disabled="">
+                    HTML forensic report
+                </button>
+<button class="primary-button report-button" data-report-format="pdf" disabled="">
+    PDF forensic report
+</button>
+</div>
+<div class="info-box">
+                The HTML report is a standalone human-readable
+                forensic report. JSON retains the complete structured
+                analysis, while the CSV exports provide focused
+                timeline and artefact datasets.
+            </div>
+</section>
+</section>
+</main>
+<footer>
+<strong>
+        Digital Forensic File Analyzer
+    </strong>
+<span>
+        Metadata and timestamps should be interpreted as evidence,
+        not treated as independently verified facts.
+    </span>
+</footer>
+<script src="/static/js/forensic.js?v=1"></script>
+</body>
+</html>

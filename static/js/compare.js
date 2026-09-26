@@ -1,0 +1,1 @@
+/* Comparison currently uses forensic.js during staged migration. */

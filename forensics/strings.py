@@ -6,7 +6,9 @@ from pathlib import Path
 
 
 MIN_STRING_LENGTH = 4
+
 MAX_SCAN_BYTES = 32 * 1024 * 1024
+
 MAX_ITEMS_PER_CATEGORY = 200
 MAX_OFFSETS_PER_ITEM = 5
 
@@ -21,21 +23,21 @@ UTF16LE_RE = re.compile(
 
 
 URL_RE = re.compile(
-    r'\bhttps?://[^\s<>\'"()\[\]{}]+',
+    r"\bhttps?://"
+    r"[^\s<>'\"()\[\]{}]+",
     re.IGNORECASE,
 )
-
 
 EMAIL_RE = re.compile(
     r"\b"
     r"[A-Z0-9._%+-]+"
     r"@"
     r"[A-Z0-9.-]+"
-    r"\.[A-Z]{2,63}"
+    r"\."
+    r"[A-Z]{2,63}"
     r"\b",
     re.IGNORECASE,
 )
-
 
 IPV4_RE = re.compile(
     r"(?<![\d.])"
@@ -44,45 +46,43 @@ IPV4_RE = re.compile(
     r"(?![\d.])"
 )
 
-
 IPV6_CANDIDATE_RE = re.compile(
     r"(?<![0-9A-Fa-f:])"
     r"[0-9A-Fa-f:]{3,39}"
     r"(?![0-9A-Fa-f:])"
 )
 
-
 DOMAIN_RE = re.compile(
     r"\b"
     r"(?:"
     r"[A-Z0-9]"
     r"(?:[A-Z0-9-]{0,61}[A-Z0-9])?"
-    r"\.)+"
+    r"\."
+    r")+"
     r"[A-Z]{2,24}"
     r"\b",
     re.IGNORECASE,
 )
 
-
+# The regex deliberately captures a broad candidate. Validation below decides
+# whether it is sufficiently path-like to retain as a forensic artefact.
 WINDOWS_PATH_RE = re.compile(
-    r'\b'
-    r'[A-Za-z]:\\'
-    r'(?:'
-    r'[^\\/:*?"<>|\r\n\t]+\\'
-    r')*'
-    r'[^\\/:*?"<>|\r\n\t]*'
+    r"\b"
+    r"[A-Za-z]:\\"
+    r"(?:"
+    r"[^\\/:*?\"<>|\r\n\t]+\\"
+    r")*"
+    r"[^\\/:*?\"<>|\r\n\t]*"
 )
-
 
 UNIX_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9:/])"
     r"/"
     r"(?:"
-    r"[A-Za-z0-9._~+-]+/"
+    r"[A-Za-z0-9._~+%$@#&()\[\]{}=-]+/"
     r")+"
-    r"[A-Za-z0-9._~+-]+"
+    r"[A-Za-z0-9._~+%$@#&()\[\]{}=-]+"
 )
-
 
 REGISTRY_RE = re.compile(
     r"\b(?:"
@@ -98,7 +98,6 @@ REGISTRY_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 EXECUTABLE_RE = re.compile(
     r"\b"
     r"[A-Za-z0-9]"
@@ -113,7 +112,6 @@ EXECUTABLE_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 USERNAME_CONTEXT_RE = re.compile(
     r"\b(?:"
     r"user(?:name)?|"
@@ -125,7 +123,6 @@ USERNAME_CONTEXT_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 WINDOWS_USER_RE = re.compile(
     r"\b"
     r"[A-Za-z]:\\Users\\"
@@ -133,14 +130,12 @@ WINDOWS_USER_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 UNIX_USER_RE = re.compile(
     r"(?:^|[\s\"'])"
     r"/home/"
     r"([^/\s\"']{1,128})/",
     re.IGNORECASE,
 )
-
 
 COMMAND_HINT_RE = re.compile(
     r"(?:^|\s)(?:"
@@ -158,7 +153,7 @@ COMMAND_HINT_RE = re.compile(
     r"python(?:3)?(?:\.exe)?|"
     r"bash|"
     r"sh"
-    r")\b",
+    r")(?=\s|$)",
     re.IGNORECASE,
 )
 
@@ -185,7 +180,6 @@ GENERIC_TLDS = {
     "me",
     "ai",
 }
-
 
 COMMON_COUNTRY_TLDS = {
     "ie",
@@ -215,6 +209,61 @@ COMMON_COUNTRY_TLDS = {
     "in",
 }
 
+# PDF names commonly appear in raw PDF syntax as /Type/Pages/... and are not
+# Unix filesystem paths. Keeping this list small and structural avoids blindly
+# filtering ordinary slash-prefixed strings.
+PDF_NAME_TOKENS = {
+    "type",
+    "subtype",
+    "pages",
+    "page",
+    "catalog",
+    "filter",
+    "length",
+    "colorspace",
+    "devicergb",
+    "devicegray",
+    "devicecmyk",
+    "basefont",
+    "encoding",
+    "font",
+    "resources",
+    "mediabox",
+    "contents",
+    "xref",
+    "root",
+    "size",
+    "image",
+    "width",
+    "height",
+}
+
+COMMON_UNIX_ROOTS = {
+    "bin",
+    "boot",
+    "dev",
+    "etc",
+    "home",
+    "lib",
+    "lib64",
+    "media",
+    "mnt",
+    "opt",
+    "proc",
+    "root",
+    "run",
+    "sbin",
+    "srv",
+    "sys",
+    "tmp",
+    "usr",
+    "var",
+    "Users",
+    "Applications",
+    "Library",
+    "System",
+    "Volumes",
+}
 
 CATEGORY_LABELS = {
     "urls": "URLs",
@@ -233,6 +282,7 @@ CATEGORY_LABELS = {
 def extract_interesting_artefacts(
     file_path: Path,
 ) -> dict:
+
     with file_path.open("rb") as file:
         data = file.read(
             MAX_SCAN_BYTES + 1
@@ -244,14 +294,11 @@ def extract_interesting_artefacts(
     )
 
     if truncated:
-        data = data[
-            :MAX_SCAN_BYTES
-        ]
+        data = data[:MAX_SCAN_BYTES]
 
     items = {
         category: {}
-        for category
-        in CATEGORY_LABELS
+        for category in CATEGORY_LABELS
     }
 
     extracted_string_count = 0
@@ -261,6 +308,7 @@ def extract_interesting_artefacts(
         offset,
         encoding,
     ) in _iter_strings(data):
+
         extracted_string_count += 1
 
         _classify_string(
@@ -277,10 +325,9 @@ def extract_interesting_artefacts(
         category,
         label,
     ) in CATEGORY_LABELS.items():
+
         category_items = list(
-            items[
-                category
-            ].values()
+            items[category].values()
         )
 
         category_items.sort(
@@ -311,38 +358,34 @@ def extract_interesting_artefacts(
         )
 
     return {
-        "total_found":
-            total_found,
-
-        "extracted_string_count":
-            extracted_string_count,
-
-        "scanned_bytes":
-            len(data),
-
-        "scan_limit_bytes":
-            MAX_SCAN_BYTES,
-
-        "truncated":
-            truncated,
-
-        "minimum_string_length":
-            MIN_STRING_LENGTH,
-
-        "categories":
-            categories,
-
+        "total_found": total_found,
+        "extracted_string_count": (
+            extracted_string_count
+        ),
+        "scanned_bytes": len(data),
+        "scan_limit_bytes": (
+            MAX_SCAN_BYTES
+        ),
+        "truncated": truncated,
+        "minimum_string_length": (
+            MIN_STRING_LENGTH
+        ),
+        "categories": categories,
         "limitations": [
             (
-                "Extracted artefacts are "
-                "investigative leads. Their presence "
-                "does not by itself indicate "
+                "Extracted artefacts are investigative leads. "
+                "Their presence does not by itself indicate "
                 "malicious activity."
             ),
             (
-                "Raw string scanning may not expose "
-                "content stored inside compressed, "
-                "encoded or encrypted containers."
+                "Raw string scanning may not expose content "
+                "stored inside compressed, encoded or encrypted "
+                "containers."
+            ),
+            (
+                "Path and executable candidates are filtered for "
+                "plausibility to reduce false positives from arbitrary "
+                "binary data."
             ),
         ],
     }
@@ -351,9 +394,11 @@ def extract_interesting_artefacts(
 def _iter_strings(
     data: bytes,
 ):
+
     for match in ASCII_RE.finditer(
         data
     ):
+
         value = (
             match
             .group()
@@ -367,6 +412,7 @@ def _iter_strings(
             len(value)
             >= MIN_STRING_LENGTH
         ):
+
             yield (
                 value,
                 match.start(),
@@ -376,6 +422,7 @@ def _iter_strings(
     for match in UTF16LE_RE.finditer(
         data
     ):
+
         value = (
             match
             .group()
@@ -389,6 +436,7 @@ def _iter_strings(
             len(value)
             >= MIN_STRING_LENGTH
         ):
+
             yield (
                 value,
                 match.start(),
@@ -403,6 +451,7 @@ def _classify_string(
     encoding: str,
     items: dict,
 ) -> None:
+
     value = value.strip()
 
     if not value:
@@ -421,8 +470,10 @@ def _classify_string(
     )
 
     occupied_domain_spans = []
+    confirmed_domain_spans = []
 
     for match in url_matches:
+
         cleaned = (
             _clean_trailing_punctuation(
                 match.group()
@@ -446,7 +497,13 @@ def _classify_string(
         )
 
     for match in email_matches:
+
         email = match.group()
+
+        if not _is_plausible_email(
+            email
+        ):
+            continue
 
         _add_item(
             items,
@@ -467,20 +524,19 @@ def _classify_string(
     for match in IPV4_RE.finditer(
         value
     ):
-        candidate = (
-            match.group()
-        )
+
+        candidate = match.group()
 
         try:
             parsed = (
                 ipaddress
                 .ip_address(candidate)
             )
-
         except ValueError:
             continue
 
         if parsed.version == 4:
+
             _add_item(
                 items,
                 "ip_addresses",
@@ -497,21 +553,15 @@ def _classify_string(
         IPV6_CANDIDATE_RE
         .finditer(value)
     ):
-        candidate = (
-            match.group()
-        )
 
-        # Avoid tiny IPv6-looking fragments that commonly
-        # occur by chance in compressed/binary data.
+        candidate = match.group()
+
         if len(candidate) < 7:
             continue
 
         if candidate.count(":") < 2:
             continue
 
-        # "::" and similarly tiny compressed forms may be
-        # technically valid syntax but are too weak to treat
-        # as useful forensic artefacts on their own.
         if candidate in (
             "::",
             "::0",
@@ -524,11 +574,11 @@ def _classify_string(
                 ipaddress
                 .ip_address(candidate)
             )
-
         except ValueError:
             continue
 
         if parsed.version == 6:
+
             _add_item(
                 items,
                 "ip_addresses",
@@ -544,6 +594,7 @@ def _classify_string(
     for match in DOMAIN_RE.finditer(
         value
     ):
+
         candidate = (
             match
             .group()
@@ -561,6 +612,28 @@ def _classify_string(
         ):
             continue
 
+        if _match_has_path_context(
+            value,
+            match.start(),
+        ):
+            continue
+
+        # A .com token followed by command-line switches is more plausibly a
+        # DOS-style executable filename than a domain. Do not double-classify it.
+        if (
+            candidate.endswith(".com")
+            and _has_strong_com_executable_context(
+                value,
+                match.start(),
+                match.end(),
+            )
+        ):
+            continue
+
+        confirmed_domain_spans.append(
+            match.span()
+        )
+
         _add_item(
             items,
             "domains",
@@ -577,13 +650,14 @@ def _classify_string(
         WINDOWS_PATH_RE
         .finditer(value)
     ):
+
         candidate = (
-            _clean_trailing_punctuation(
+            _trim_windows_path_candidate(
                 match.group()
             )
         )
 
-        if not _is_plausible_path(
+        if not _is_plausible_windows_path(
             candidate
         ):
             continue
@@ -603,13 +677,14 @@ def _classify_string(
     for match in UNIX_PATH_RE.finditer(
         value
     ):
+
         candidate = (
             _clean_trailing_punctuation(
                 match.group()
             )
         )
 
-        if not _is_plausible_path(
+        if not _is_plausible_unix_path(
             candidate
         ):
             continue
@@ -629,6 +704,7 @@ def _classify_string(
     for match in REGISTRY_RE.finditer(
         value
     ):
+
         candidate = (
             _clean_trailing_punctuation(
                 match.group()
@@ -651,12 +727,20 @@ def _classify_string(
         EXECUTABLE_RE
         .finditer(value)
     ):
-        candidate = (
-            match.group()
-        )
+
+        candidate = match.group()
+
+        if _span_overlaps(
+            match.span(),
+            occupied_domain_spans,
+        ):
+            continue
 
         if not _is_plausible_executable(
-            candidate
+            candidate,
+            context=value,
+            start=match.start(),
+            end=match.end(),
         ):
             continue
 
@@ -677,9 +761,11 @@ def _classify_string(
         WINDOWS_USER_RE,
         UNIX_USER_RE,
     ):
+
         for match in regex.finditer(
             value
         ):
+
             username = (
                 match
                 .group(1)
@@ -706,6 +792,7 @@ def _classify_string(
     if _looks_like_command_line(
         value
     ):
+
         leading_spaces = (
             len(value)
             - len(
@@ -731,9 +818,72 @@ def _classify_string(
         )
 
 
+def _is_plausible_email(
+    value: str,
+) -> bool:
+
+    if len(value) > 254:
+        return False
+
+    if "@" not in value:
+        return False
+
+    local_part, domain = value.rsplit(
+        "@",
+        1,
+    )
+
+    if len(local_part) < 2:
+        return False
+
+    if len(local_part) > 64:
+        return False
+
+    # Single-character/random numeric locals are especially common when
+    # arbitrary binary data happens to decode into printable text.
+    if not any(
+        character.isalpha()
+        for character in local_part
+    ):
+        return False
+
+    labels = domain.split(".")
+
+    if len(labels) < 2:
+        return False
+
+    if any(
+        not label
+        or len(label) > 63
+        for label in labels
+    ):
+        return False
+
+    if len(labels[-2]) < 2:
+        return False
+
+    tld = labels[-1]
+
+    if not (
+        2 <= len(tld) <= 24
+        and tld.isalpha()
+    ):
+        return False
+
+    if any(
+        label.startswith("-")
+        or label.endswith("-")
+        for label in labels
+    ):
+        return False
+
+    return True
+
+
 def _is_plausible_domain(
     value: str,
 ) -> bool:
+
     if len(value) < 6:
         return False
 
@@ -775,35 +925,191 @@ def _is_plausible_domain(
     if len(main_label) < 2:
         return False
 
-    if (
-        not any(
-            character.isalpha()
-            for character in main_label
+    if not any(
+        character.isalpha()
+        for character in main_label
+    ):
+        return False
+
+    if value.count("-") > 5:
+        return False
+
+    return True
+
+
+
+def _match_has_path_context(
+    context: str,
+    start: int,
+) -> bool:
+
+    if start <= 0:
+        return False
+
+    preceding = context[
+        max(0, start - 2):start
+    ]
+
+    return (
+        "\\" in preceding
+        or "/" in preceding
+    )
+
+def _is_plausible_windows_path(
+    value: str,
+) -> bool:
+
+    if len(value) < 6:
+        return False
+
+    if len(value) > 300:
+        return False
+
+    if not re.match(
+        r"^[A-Za-z]:\\",
+        value,
+    ):
+        return False
+
+    remainder = value[3:]
+
+    if not remainder:
+        return False
+
+    if any(
+        character in remainder
+        for character in (
+            "<",
+            ">",
+            "|",
+            '"',
+            "\r",
+            "\n",
+            "\t",
         )
     ):
         return False
 
-    if (
-        value.count("-")
-        > 5
+    components = [
+        component
+        for component in remainder.split("\\")
+        if component
+    ]
+
+    if not components:
+        return False
+
+    if any(
+        len(component) > 120
+        for component in components
+    ):
+        return False
+
+    if any(
+        not _component_has_balanced_delimiters(
+            component
+        )
+        for component in components
+    ):
+        return False
+
+    if any(
+        _looks_like_encoded_blob_component(
+            component
+        )
+        for component in components
+    ):
+        return False
+
+    alphanumeric_count = sum(
+        character.isalnum()
+        for character in remainder
+    )
+
+    if alphanumeric_count < 4:
+        return False
+
+    leaf = components[-1]
+
+    has_nested_structure = (
+        len(components) >= 2
+    )
+
+    has_file_extension = (
+        _has_plausible_file_extension(
+            leaf
+        )
+    )
+
+    simple_directory_name = bool(
+        re.fullmatch(
+            r"[A-Za-z0-9 _.$@%+\-~()\[\]{}]{4,}",
+            leaf,
+        )
+    )
+
+    if not (
+        has_nested_structure
+        or has_file_extension
+        or simple_directory_name
     ):
         return False
 
     return True
 
 
-def _is_plausible_path(
+def _is_plausible_unix_path(
     value: str,
 ) -> bool:
-    if len(value) < 4:
+
+    if len(value) < 5:
         return False
 
     if len(value) > 300:
         return False
 
+    if not value.startswith("/"):
+        return False
+
+    components = [
+        component
+        for component in value.split("/")
+        if component
+    ]
+
+    if len(components) < 2:
+        return False
+
+    if any(
+        len(component) > 80
+        for component in components
+    ):
+        return False
+
+    if any(
+        _looks_like_encoded_blob_component(
+            component
+        )
+        for component in components
+    ):
+        return False
+
+    first = components[0]
+
+    if first.casefold() in PDF_NAME_TOKENS:
+        return False
+
+    # Raw PDF object names frequently form strings such as
+    # /Type/Pages/Count or /ColorSpace/DeviceRGB/Subtype/Image/Height.
+    # When every component looks like a PDF name token, this is structure,
+    # not a filesystem path.
     if (
-        value.count("\\") == 0
-        and value.count("/") < 2
+        len(components) >= 2
+        and all(
+            component.casefold()
+            in PDF_NAME_TOKENS
+            for component in components
+        )
     ):
         return False
 
@@ -812,25 +1118,47 @@ def _is_plausible_path(
         for character in value
     )
 
-    if (
-        alphanumeric_count
-        < 3
-    ):
+    if alphanumeric_count < 5:
         return False
 
-    return True
+    if first in COMMON_UNIX_ROOTS:
+        return True
+
+    leaf = components[-1]
+
+    if _has_plausible_file_extension(
+        leaf
+    ):
+        return True
+
+    # Unknown roots are accepted only when there is enough directory structure
+    # to look like a genuine path rather than a short slash-delimited fragment.
+    if (
+        len(components) >= 3
+        and sum(
+            character.isalpha()
+            for character in value
+        ) >= 6
+    ):
+        return True
+
+    return False
 
 
 def _is_plausible_executable(
     value: str,
+    *,
+    context: str,
+    start: int,
+    end: int,
 ) -> bool:
-    basename = (
-        value
-        .rsplit(
-            ".",
-            1,
-        )[0]
+
+    basename, dot, extension = (
+        value.rpartition(".")
     )
+
+    if not dot:
+        return False
 
     if len(basename) < 2:
         return False
@@ -841,12 +1169,68 @@ def _is_plausible_executable(
     ):
         return False
 
+    # .com is both a DOS executable extension and a very common Internet TLD.
+    # A bare domain-like value such as ns.adobe.com is therefore ambiguous and
+    # must not be called executable without strong executable context.
+    if extension.casefold() == "com":
+
+        if _is_plausible_domain(
+            value.casefold()
+        ):
+
+            if not _has_strong_com_executable_context(
+                context,
+                start,
+                end,
+            ):
+                return False
+
     return True
+
+
+def _has_strong_com_executable_context(
+    context: str,
+    start: int,
+    end: int,
+) -> bool:
+
+    before = context[
+        max(0, start - 8):start
+    ]
+
+    after = context[
+        end:min(
+            len(context),
+            end + 24,
+        )
+    ]
+
+    # URL syntax is explicit evidence that this is a host/domain.
+    if (
+        before.endswith("://")
+        or before.endswith("//")
+        or after.startswith("/")
+    ):
+        return False
+
+    # Windows path context is strong evidence that .com is a filename.
+    if "\\" in before:
+        return True
+
+    # Command-line switches after the candidate are also strong evidence.
+    if re.match(
+        r"\s+(?:/|-|--)[A-Za-z0-9]",
+        after,
+    ):
+        return True
+
+    return False
 
 
 def _is_plausible_username(
     value: str,
 ) -> bool:
+
     if len(value) < 2:
         return False
 
@@ -869,74 +1253,137 @@ def _looks_like_command_line(
     value: str,
 ) -> bool:
 
-    value = value.strip()
-
-
-    if len(value) < 8:
-        return False
-
-
     if len(value) > 2000:
         return False
-
 
     match = COMMAND_HINT_RE.search(
         value
     )
 
-
     if not match:
         return False
 
+    # A command name by itself is an executable reference, not a command line.
+    # Requiring a real argument after the command also prevents random binary
+    # strings such as "sH,.>H" from being classified as shell commands.
+    remainder = value[
+        match.end():
+    ].strip()
 
-    command = (
-        match.group()
-        .strip()
-        .lower()
-    )
+    if len(remainder) < 2:
+        return False
 
-
-    strong_markers = (
-        " -",
-        " /",
-        " --",
-        "-enc",
-        "-encodedcommand",
-        "-command",
-        "/c ",
-        "/k ",
-        "|",
-        ">",
-        "&&",
-        "http://",
-        "https://",
-    )
-
-
-    if any(
-        marker in value.lower()
-        for marker in strong_markers
-    ):
-        return True
-
-
-    # Shell names such as "sh" or "bash" are too common
-    # in arbitrary binary strings to trust without clear
-    # command syntax.
-    if command in (
-        "sh",
-        "bash",
+    if not re.search(
+        r"[A-Za-z0-9_./\\-]{2,}",
+        remainder,
     ):
         return False
 
+    return True
 
-    # For named executables, require enough surrounding
-    # text to look like an actual invocation rather than
-    # an isolated filename.
-    return (
-        len(value.split()) >= 3
-        and len(value) >= 12
+
+def _trim_windows_path_candidate(
+    value: str,
+) -> str:
+
+    # Broad regex matching may consume punctuation or adjacent text. Stop at
+    # delimiters that cannot form a Windows path and then clean ordinary
+    # sentence punctuation from the end.
+    value = value.strip()
+
+    for delimiter in (
+        " ; ",
+        " | ",
+        " < ",
+        " > ",
+    ):
+
+        if delimiter in value:
+            value = value.split(
+                delimiter,
+                1,
+            )[0]
+
+    return _clean_trailing_punctuation(
+        value
     )
+
+
+def _component_has_balanced_delimiters(
+    component: str,
+) -> bool:
+
+    pairs = (
+        ("(", ")"),
+        ("[", "]"),
+        ("{", "}"),
+    )
+
+    for opening, closing in pairs:
+
+        if component.count(
+            opening
+        ) != component.count(
+            closing
+        ):
+            return False
+
+    return True
+
+
+def _looks_like_encoded_blob_component(
+    component: str,
+) -> bool:
+
+    if len(component) < 32:
+        return False
+
+    if "." in component:
+        return False
+
+    if not re.fullmatch(
+        r"[A-Za-z0-9_+=-]+",
+        component,
+    ):
+        return False
+
+    alpha_numeric = sum(
+        character.isalnum()
+        for character in component
+    )
+
+    ratio = (
+        alpha_numeric
+        / len(component)
+    )
+
+    return ratio >= 0.90
+
+
+def _has_plausible_file_extension(
+    component: str,
+) -> bool:
+
+    if "." not in component:
+        return False
+
+    basename, dot, extension = (
+        component.rpartition(".")
+    )
+
+    if not dot:
+        return False
+
+    if not basename:
+        return False
+
+    if not re.fullmatch(
+        r"[A-Za-z0-9]{1,12}",
+        extension,
+    ):
+        return False
+
+    return True
 
 
 def _match_offset(
@@ -944,6 +1391,7 @@ def _match_offset(
     character_offset: int,
     encoding: str,
 ) -> int:
+
     multiplier = (
         2
         if encoding == "UTF-16LE"
@@ -964,6 +1412,7 @@ def _add_item(
     offset: int,
     encoding: str,
 ) -> None:
+
     value = value.strip()
 
     if not value:
@@ -975,29 +1424,22 @@ def _add_item(
     key = value.casefold()
 
     existing = (
-        items[
-            category
-        ].get(key)
+        items[category].get(
+            key
+        )
     )
 
     if existing is None:
-        items[
-            category
-        ][key] = {
-            "value":
-                value,
 
-            "occurrences":
-                1,
-
+        items[category][key] = {
+            "value": value,
+            "occurrences": 1,
             "offsets": [
                 offset
             ],
-
             "offsets_hex": [
                 f"0x{offset:08X}"
             ],
-
             "encodings": [
                 encoding
             ],
@@ -1021,6 +1463,7 @@ def _add_item(
         )
         < MAX_OFFSETS_PER_ITEM
     ):
+
         existing[
             "offsets"
         ].append(
@@ -1039,6 +1482,7 @@ def _add_item(
             "encodings"
         ]
     ):
+
         existing[
             "encodings"
         ].append(
@@ -1049,6 +1493,7 @@ def _add_item(
 def _clean_trailing_punctuation(
     value: str,
 ) -> str:
+
     return value.rstrip(
         ".,;:!?)]}'\""
     )
@@ -1057,13 +1502,12 @@ def _clean_trailing_punctuation(
 def _looks_like_ip(
     value: str,
 ) -> bool:
+
     try:
         ipaddress.ip_address(
             value
         )
-
         return True
-
     except ValueError:
         return False
 
@@ -1074,12 +1518,14 @@ def _span_overlaps(
         tuple[int, int]
     ],
 ) -> bool:
+
     start, end = span
 
     for (
         occupied_start,
         occupied_end,
     ) in occupied:
+
         if (
             start < occupied_end
             and end > occupied_start

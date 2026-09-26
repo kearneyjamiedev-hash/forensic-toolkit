@@ -22,6 +22,10 @@ from reportlab.platypus import (
 )
 
 
+# -----------------------------------------------------------------------------
+# JSON
+# -----------------------------------------------------------------------------
+
 def build_json_report(
     evidence: dict,
     verification_history: list[dict],
@@ -70,29 +74,35 @@ def build_json_report(
     )
 
 
+# -----------------------------------------------------------------------------
+# Timeline CSV
+# -----------------------------------------------------------------------------
+
 def build_timeline_csv(
     evidence: dict,
 ) -> str:
 
     analysis = (
-        evidence[
+        evidence.get(
             "analysis"
-        ]
+        )
         or {}
     )
 
 
     timeline = (
         analysis.get(
-            "timeline",
-            {}
+            "timeline"
         )
+        or {}
     )
 
 
-    events = timeline.get(
-        "events",
-        []
+    events = (
+        timeline.get(
+            "events"
+        )
+        or []
     )
 
 
@@ -174,9 +184,9 @@ def build_timeline_csv(
                 "notes":
                     " ".join(
                         event.get(
-                            "notes",
-                            []
+                            "notes"
                         )
+                        or []
                     ),
             }
         )
@@ -185,31 +195,35 @@ def build_timeline_csv(
     return output.getvalue()
 
 
+# -----------------------------------------------------------------------------
+# Artefacts CSV
+# -----------------------------------------------------------------------------
+
 def build_artefacts_csv(
     evidence: dict,
 ) -> str:
 
     analysis = (
-        evidence[
+        evidence.get(
             "analysis"
-        ]
+        )
         or {}
     )
 
 
     artefacts = (
         analysis.get(
-            "artefacts",
-            {}
+            "artefacts"
         )
+        or {}
     )
 
 
     categories = (
         artefacts.get(
-            "categories",
-            {}
+            "categories"
         )
+        or {}
     )
 
 
@@ -239,9 +253,11 @@ def build_artefacts_csv(
         category,
     ) in categories.items():
 
-        for item in category.get(
-            "items",
-            []
+        for item in (
+            category.get(
+                "items"
+            )
+            or []
         ):
 
             writer.writerow(
@@ -257,23 +273,23 @@ def build_artefacts_csv(
                     "occurrences":
                         item.get(
                             "occurrences",
-                            1
+                            1,
                         ),
 
                     "encodings":
                         ", ".join(
                             item.get(
-                                "encodings",
-                                []
+                                "encodings"
                             )
+                            or []
                         ),
 
                     "offsets_hex":
                         ", ".join(
                             item.get(
-                                "offsets_hex",
-                                []
+                                "offsets_hex"
                             )
+                            or []
                         ),
                 }
             )
@@ -282,1010 +298,14 @@ def build_artefacts_csv(
     return output.getvalue()
 
 
+# -----------------------------------------------------------------------------
+# HTML forensic report
+# -----------------------------------------------------------------------------
+
 def build_html_report(
     evidence: dict,
     verification_history: list[dict],
 ) -> str:
-
-    analysis = (
-        evidence.get(
-            "analysis"
-        )
-        or {}
-    )
-
-
-    overview = (
-        analysis.get(
-            "overview",
-            {}
-        )
-    )
-
-
-    hashes = (
-        analysis.get(
-            "hashes",
-            {}
-        )
-    )
-
-
-    signature = (
-        analysis.get(
-            "signature",
-            {}
-        )
-    )
-
-
-    filesystem = (
-        analysis.get(
-            "filesystem",
-            {}
-        )
-    )
-
-
-    timeline = (
-        analysis.get(
-            "timeline",
-            {}
-        )
-    )
-
-
-    artefacts = (
-        analysis.get(
-            "artefacts",
-            {}
-        )
-    )
-
-
-    metadata = (
-        analysis.get(
-            "metadata",
-            {}
-        )
-    )
-
-
-    warnings = (
-        analysis.get(
-            "warnings",
-            []
-        )
-    )
-
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-<title>Forensic Analysis Report</title>
-
-<style>
-
-:root {{
-    --background: #f3f5f8;
-    --surface: #ffffff;
-    --surface-soft: #f8fafc;
-    --border: #dce3ea;
-    --text: #18212b;
-    --muted: #657383;
-    --accent: #4169e1;
-    --success: #26734d;
-    --warning: #966515;
-}}
-
-* {{
-    box-sizing: border-box;
-}}
-
-body {{
-    margin: 0;
-    background: var(--background);
-    color: var(--text);
-    font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-}}
-
-main {{
-    width: min(1100px, 94%);
-    margin: 40px auto 80px;
-}}
-
-.header {{
-    margin-bottom: 28px;
-}}
-
-.eyebrow {{
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    font-size: 11px;
-    font-weight: 650;
-}}
-
-h1 {{
-    margin: 6px 0 8px;
-    font-size: 30px;
-}}
-
-.subtitle {{
-    color: var(--muted);
-    font-size: 13px;
-}}
-
-.panel {{
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
-    margin-bottom: 18px;
-}}
-
-h2 {{
-    margin: 0 0 16px;
-    font-size: 18px;
-}}
-
-.grid {{
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-}}
-
-.item {{
-    background: var(--surface-soft);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 13px;
-}}
-
-.label {{
-    display: block;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    font-size: 10px;
-    margin-bottom: 6px;
-}}
-
-.value {{
-    font-size: 13px;
-    overflow-wrap: anywhere;
-}}
-
-.code {{
-    font-family:
-        ui-monospace,
-        SFMono-Regular,
-        Menlo,
-        Consolas,
-        monospace;
-}}
-
-table {{
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}}
-
-th,
-td {{
-    text-align: left;
-    vertical-align: top;
-    padding: 10px;
-    border-top: 1px solid var(--border);
-}}
-
-th {{
-    color: var(--muted);
-}}
-
-.warning {{
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    background: #fff8e8;
-    color: var(--warning);
-}}
-
-.success {{
-    color: var(--success);
-    font-weight: 650;
-}}
-
-.timeline-event {{
-    border-left: 2px solid var(--accent);
-    padding: 4px 0 18px 16px;
-}}
-
-.timeline-event:last-child {{
-    padding-bottom: 4px;
-}}
-
-.timeline-time {{
-    font-size: 12px;
-    font-weight: 650;
-}}
-
-.timeline-source {{
-    color: var(--muted);
-    margin-top: 4px;
-    font-size: 11px;
-}}
-
-.metadata-group {{
-    margin-top: 16px;
-}}
-
-.metadata-group h3 {{
-    font-size: 14px;
-}}
-
-footer {{
-    color: var(--muted);
-    font-size: 11px;
-    margin-top: 30px;
-}}
-
-@media print {{
-
-    body {{
-        background: white;
-    }}
-
-    main {{
-        width: 100%;
-        margin: 0;
-    }}
-
-    .panel {{
-        break-inside: avoid;
-        box-shadow: none;
-    }}
-}}
-
-</style>
-</head>
-
-<body>
-<main>
-
-<div class="header">
-
-    <div class="eyebrow">
-        Digital Forensic Analysis
-    </div>
-
-    <h1>
-        Forensic File Analysis Report
-    </h1>
-
-    <div class="subtitle">
-        Evidence ID:
-        {e(evidence.get("evidence_id"))}
-    </div>
-
-</div>
-
-
-<section class="panel">
-
-<h2>Evidence overview</h2>
-
-<div class="grid">
-
-{report_item(
-    "Filename",
-    overview.get("filename")
-)}
-
-{report_item(
-    "Detected type",
-    signature.get("detected_type")
-)}
-
-{report_item(
-    "MIME type",
-    signature.get("detected_mime")
-)}
-
-{report_item(
-    "File size",
-    overview.get("size_bytes")
-)}
-
-{report_item(
-    "Analysis timestamp",
-    evidence.get(
-        "analysis_timestamp_utc"
-    ),
-    code=True,
-)}
-
-{report_item(
-    "Evidence ID",
-    evidence.get(
-        "evidence_id"
-    ),
-    code=True,
-)}
-
-</div>
-
-</section>
-
-
-<section class="panel">
-
-<h2>Integrity</h2>
-
-{report_item(
-    "Original SHA-256",
-    evidence.get(
-        "original_sha256"
-    ),
-    code=True,
-)}
-
-{report_item(
-    "SHA-1",
-    hashes.get("sha1"),
-    code=True,
-)}
-
-{report_item(
-    "MD5",
-    hashes.get("md5"),
-    code=True,
-)}
-
-<h3>Verification history</h3>
-
-{verification_table(
-    verification_history
-)}
-
-</section>
-
-
-<section class="panel">
-
-<h2>File identification</h2>
-
-<div class="grid">
-
-{report_item(
-    "Filename extension",
-    signature.get(
-        "extension"
-    )
-)}
-
-{report_item(
-    "Detected type",
-    signature.get(
-        "detected_type"
-    )
-)}
-
-{report_item(
-    "Detected MIME",
-    signature.get(
-        "detected_mime"
-    )
-)}
-
-{report_item(
-    "Extension matches",
-    signature.get(
-        "extension_matches"
-    )
-)}
-
-</div>
-
-</section>
-
-
-{warnings_section(
-    warnings
-)}
-
-
-<section class="panel">
-
-<h2>Filesystem context</h2>
-
-<div class="grid">
-
-{report_item(
-    "Scope",
-    filesystem.get(
-        "scope"
-    )
-)}
-
-{report_item(
-    "Created",
-    filesystem.get(
-        "created"
-    ),
-    code=True,
-)}
-
-{report_item(
-    "Modified",
-    filesystem.get(
-        "modified"
-    ),
-    code=True,
-)}
-
-{report_item(
-    "Accessed",
-    filesystem.get(
-        "accessed"
-    ),
-    code=True,
-)}
-
-</div>
-
-<p class="subtitle">
-{e(filesystem.get("warning"))}
-</p>
-
-</section>
-
-
-<section class="panel">
-
-<h2>Forensic timeline</h2>
-
-{timeline_html(
-    timeline
-)}
-
-</section>
-
-
-<section class="panel">
-
-<h2>Interesting artefacts</h2>
-
-<p class="subtitle">
-Artefacts are investigative leads and are not,
-by themselves, evidence of malicious activity.
-</p>
-
-{artefacts_html(
-    artefacts
-)}
-
-</section>
-
-
-<section class="panel">
-
-<h2>Extracted metadata</h2>
-
-{metadata_html(
-    metadata
-)}
-
-</section>
-
-
-<section class="panel">
-
-<h2>Interpretation limitations</h2>
-
-<ul>
-    <li>
-        Embedded metadata can be altered,
-        removed or generated by software.
-    </li>
-
-    <li>
-        Author or creator metadata does not
-        independently prove human authorship.
-    </li>
-
-    <li>
-        Filesystem timestamps may be changed
-        by copying, operating-system behaviour
-        or deliberate manipulation.
-    </li>
-
-    <li>
-        Evidence-copy filesystem timestamps
-        do not necessarily represent timestamps
-        from the original source filesystem.
-    </li>
-
-    <li>
-        Extracted URLs, domains, addresses,
-        paths and commands should be interpreted
-        in context and are not automatically
-        malicious.
-    </li>
-</ul>
-
-</section>
-
-
-<footer>
-Generated by Digital Forensic File Analyzer.
-The original SHA-256 stored at first analysis is
-included above as the integrity baseline.
-</footer>
-
-</main>
-</body>
-</html>
-"""
-
-
-def report_item(
-    label,
-    value,
-    code=False,
-):
-
-    class_name = (
-        "value code"
-        if code
-        else "value"
-    )
-
-
-    return f"""
-<div class="item">
-    <span class="label">
-        {e(label)}
-    </span>
-
-    <span class="{class_name}">
-        {e(value)}
-    </span>
-</div>
-"""
-
-
-def verification_table(
-    history,
-):
-
-    if not history:
-
-        return """
-<p class="subtitle">
-No integrity verification has been recorded.
-</p>
-"""
-
-
-    rows = []
-
-
-    for item in history:
-
-        status = (
-            item.get(
-                "status"
-            )
-            or ""
-        )
-
-
-        rows.append(
-            f"""
-<tr>
-<td>
-{e(item.get("verified_at_utc"))}
-</td>
-<td>
-{e(item.get("selected_filename"))}
-</td>
-<td>
-{e(status)}
-</td>
-<td class="code">
-{e(item.get("current_sha256"))}
-</td>
-</tr>
-"""
-        )
-
-
-    return f"""
-<table>
-<thead>
-<tr>
-<th>Verified at</th>
-<th>Selected file</th>
-<th>Status</th>
-<th>SHA-256</th>
-</tr>
-</thead>
-
-<tbody>
-{"".join(rows)}
-</tbody>
-</table>
-"""
-
-
-def warnings_section(
-    warnings,
-):
-
-    if not warnings:
-
-        return ""
-
-
-    blocks = []
-
-
-    for warning in warnings:
-
-        blocks.append(
-            f"""
-<div class="warning">
-{e(warning.get("message"))}
-</div>
-"""
-        )
-
-
-    return f"""
-<section class="panel">
-
-<h2>Analysis observations</h2>
-
-{"".join(blocks)}
-
-</section>
-"""
-
-
-def timeline_html(
-    timeline,
-):
-
-    events = timeline.get(
-        "events",
-        []
-    )
-
-
-    observations = timeline.get(
-        "observations",
-        []
-    )
-
-
-    parts = []
-
-
-    for observation in observations:
-
-        parts.append(
-            f"""
-<div class="warning">
-<strong>
-{e(observation.get("title"))}
-</strong>
-<br>
-{e(observation.get("message"))}
-</div>
-"""
-        )
-
-
-    if not events:
-
-        parts.append(
-            """
-<p class="subtitle">
-No recognised forensic timestamps were found.
-</p>
-"""
-        )
-
-
-    for event in events:
-
-        timestamp = (
-            event.get(
-                "timestamp_utc"
-            )
-            or event.get(
-                "timestamp_original"
-            )
-        )
-
-
-        parts.append(
-            f"""
-<div class="timeline-event">
-
-<div class="timeline-time code">
-{e(timestamp)}
-</div>
-
-<strong>
-{e(event.get("label"))}
-</strong>
-
-<div class="timeline-source">
-{e(event.get("source_group"))}:
-{e(event.get("source_field"))}
-—
-{e(event.get("scope"))}
-</div>
-
-</div>
-"""
-        )
-
-
-    return "".join(parts)
-
-
-def artefacts_html(
-    artefacts,
-):
-
-    categories = artefacts.get(
-        "categories",
-        {}
-    )
-
-
-    sections = []
-
-
-    for category in categories.values():
-
-        items = category.get(
-            "items",
-            []
-        )
-
-
-        if not items:
-
-            continue
-
-
-        rows = []
-
-
-        for item in items:
-
-            rows.append(
-                f"""
-<tr>
-<td class="code">
-{e(item.get("value"))}
-</td>
-
-<td>
-{e(item.get("occurrences"))}
-</td>
-
-<td class="code">
-{e(", ".join(
-    item.get(
-        "offsets_hex",
-        []
-    )
-))}
-</td>
-</tr>
-"""
-            )
-
-
-        sections.append(
-            f"""
-<div class="metadata-group">
-
-<h3>
-{e(category.get("label"))}
-({len(items)})
-</h3>
-
-<table>
-
-<thead>
-<tr>
-<th>Value</th>
-<th>Occurrences</th>
-<th>Offsets</th>
-</tr>
-</thead>
-
-<tbody>
-{"".join(rows)}
-</tbody>
-
-</table>
-
-</div>
-"""
-        )
-
-
-    if not sections:
-
-        return """
-<p class="subtitle">
-No interesting artefacts were identified.
-</p>
-"""
-
-
-    return "".join(sections)
-
-
-def metadata_html(
-    metadata,
-):
-
-    if (
-        metadata.get(
-            "status"
-        )
-        != "ok"
-    ):
-
-        return f"""
-<div class="warning">
-{e(metadata.get("error"))}
-</div>
-"""
-
-
-    categories = metadata.get(
-        "categories",
-        {}
-    )
-
-
-    sections = []
-
-
-    for (
-        category_name,
-        fields,
-    ) in categories.items():
-
-        if not fields:
-
-            continue
-
-
-        rows = []
-
-
-        for field in fields:
-
-            rows.append(
-                f"""
-<tr>
-<td>
-{e(field.get("group"))}:
-{e(field.get("name"))}
-</td>
-
-<td class="code">
-{e(format_value(
-    field.get("value")
-))}
-</td>
-</tr>
-"""
-            )
-
-
-        sections.append(
-            f"""
-<div class="metadata-group">
-
-<h3>
-{e(
-    category_name
-    .replace("_", " ")
-    .title()
-)}
-</h3>
-
-<table>
-
-<tbody>
-{"".join(rows)}
-</tbody>
-
-</table>
-
-</div>
-"""
-        )
-
-
-    if not sections:
-
-        return """
-<p class="subtitle">
-No metadata was extracted.
-</p>
-"""
-
-
-    return "".join(sections)
-
-
-def format_value(
-    value,
-):
-
-    if isinstance(
-        value,
-        (
-            dict,
-            list,
-        ),
-    ):
-
-        return json.dumps(
-            value,
-            ensure_ascii=False,
-        )
-
-
-    return value
-
-
-def e(
-    value,
-):
-
-    if value is None:
-
-        return "Unavailable"
-
-
-    return html.escape(
-        str(value)
-    )
-    
-    
-    # -----------------------------------------------------------------------------
-# PDF forensic report
-# -----------------------------------------------------------------------------
-
-def build_pdf_report(
-    evidence: dict,
-    verification_history: list[dict],
-) -> bytes:
 
     analysis = (
         evidence.get(
@@ -1367,25 +387,1659 @@ def build_pdf_report(
     )
 
 
+    filesystem_note = (
+        _filesystem_context_note(
+            analysis,
+            filesystem,
+        )
+    )
+
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+    Forensic Analysis Report
+</title>
+
+
+<style>
+
+:root {{
+    --background: #f3f5f8;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --border: #dce3ea;
+    --text: #18212b;
+    --muted: #657383;
+    --accent: #4169e1;
+    --success: #26734d;
+    --warning: #966515;
+}}
+
+
+* {{
+    box-sizing: border-box;
+}}
+
+
+body {{
+    margin: 0;
+
+    background:
+        var(--background);
+
+    color:
+        var(--text);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}}
+
+
+main {{
+    width:
+        min(
+            1100px,
+            94%
+        );
+
+    margin:
+        40px auto 80px;
+}}
+
+
+.header {{
+    margin-bottom:
+        28px;
+}}
+
+
+.eyebrow {{
+    color:
+        var(--muted);
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .06em;
+
+    font-size:
+        11px;
+
+    font-weight:
+        650;
+}}
+
+
+h1 {{
+    margin:
+        6px 0 8px;
+
+    font-size:
+        30px;
+}}
+
+
+.subtitle {{
+    color:
+        var(--muted);
+
+    font-size:
+        13px;
+}}
+
+
+.panel {{
+    background:
+        var(--surface);
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius:
+        12px;
+
+    padding:
+        22px;
+
+    margin-bottom:
+        18px;
+}}
+
+
+h2 {{
+    margin:
+        0 0 16px;
+
+    font-size:
+        18px;
+}}
+
+
+h3 {{
+    margin-top:
+        18px;
+
+    font-size:
+        14px;
+}}
+
+
+.grid {{
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(
+                220px,
+                1fr
+            )
+        );
+
+    gap:
+        10px;
+}}
+
+
+.item {{
+    background:
+        var(--surface-soft);
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius:
+        8px;
+
+    padding:
+        13px;
+}}
+
+
+.label {{
+    display:
+        block;
+
+    color:
+        var(--muted);
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .04em;
+
+    font-size:
+        10px;
+
+    margin-bottom:
+        6px;
+}}
+
+
+.value {{
+    font-size:
+        13px;
+
+    overflow-wrap:
+        anywhere;
+}}
+
+
+.code {{
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace;
+}}
+
+
+table {{
+    width:
+        100%;
+
+    border-collapse:
+        collapse;
+
+    font-size:
+        12px;
+}}
+
+
+th,
+td {{
+    text-align:
+        left;
+
+    vertical-align:
+        top;
+
+    padding:
+        10px;
+
+    border-top:
+        1px solid
+        var(--border);
+}}
+
+
+th {{
+    color:
+        var(--muted);
+}}
+
+
+.warning {{
+    padding:
+        12px 14px;
+
+    margin-bottom:
+        10px;
+
+    border-radius:
+        8px;
+
+    background:
+        #fff8e8;
+
+    color:
+        var(--warning);
+}}
+
+
+.success {{
+    color:
+        var(--success);
+
+    font-weight:
+        650;
+}}
+
+
+.timeline-event {{
+    border-left:
+        2px solid
+        var(--accent);
+
+    padding:
+        4px 0 18px 16px;
+}}
+
+
+.timeline-event:last-child {{
+    padding-bottom:
+        4px;
+}}
+
+
+.timeline-time {{
+    font-size:
+        12px;
+
+    font-weight:
+        650;
+}}
+
+
+.timeline-source {{
+    color:
+        var(--muted);
+
+    margin-top:
+        4px;
+
+    font-size:
+        11px;
+}}
+
+
+.metadata-group {{
+    margin-top:
+        16px;
+}}
+
+
+footer {{
+    color:
+        var(--muted);
+
+    font-size:
+        11px;
+
+    margin-top:
+        30px;
+}}
+
+
+@media print {{
+
+    body {{
+        background:
+            white;
+    }}
+
+
+    main {{
+        width:
+            100%;
+
+        margin:
+            0;
+    }}
+
+
+    .panel {{
+        break-inside:
+            avoid;
+
+        box-shadow:
+            none;
+    }}
+
+}}
+
+</style>
+
+</head>
+
+
+<body>
+
+<main>
+
+
+<div class="header">
+
+    <div class="eyebrow">
+        Digital Forensic Analysis
+    </div>
+
+    <h1>
+        Forensic File Analysis Report
+    </h1>
+
+    <div class="subtitle">
+        Evidence ID:
+        {e(evidence.get("evidence_id"))}
+    </div>
+
+</div>
+
+
+<section class="panel">
+
+<h2>
+    Evidence overview
+</h2>
+
+<div class="grid">
+
+{report_item(
+    "Filename",
+    overview.get(
+        "filename"
+    ),
+)}
+
+{report_item(
+    "Detected type",
+    signature.get(
+        "detected_type"
+    ),
+)}
+
+{report_item(
+    "MIME type",
+    signature.get(
+        "detected_mime"
+    ),
+)}
+
+{report_item(
+    "File size",
+    _format_bytes(
+        overview.get(
+            "size_bytes"
+        )
+    ),
+)}
+
+{report_item(
+    "Analysis timestamp",
+    evidence.get(
+        "analysis_timestamp_utc"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "Evidence ID",
+    evidence.get(
+        "evidence_id"
+    ),
+    code=True,
+)}
+
+</div>
+
+</section>
+
+
+<section class="panel">
+
+<h2>
+    Integrity
+</h2>
+
+{report_item(
+    "Original SHA-256",
+    evidence.get(
+        "original_sha256"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "SHA-1",
+    hashes.get(
+        "sha1"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "MD5",
+    hashes.get(
+        "md5"
+    ),
+    code=True,
+)}
+
+<h3>
+    Verification history
+</h3>
+
+{verification_table(
+    verification_history
+)}
+
+</section>
+
+
+<section class="panel">
+
+<h2>
+    File identification
+</h2>
+
+<div class="grid">
+
+{report_item(
+    "Filename extension",
+    signature.get(
+        "extension"
+    ),
+)}
+
+{report_item(
+    "Detected type",
+    signature.get(
+        "detected_type"
+    ),
+)}
+
+{report_item(
+    "Detected MIME",
+    signature.get(
+        "detected_mime"
+    ),
+)}
+
+{report_item(
+    "Extension MIME",
+    signature.get(
+        "extension_mime"
+    ),
+)}
+
+{report_item(
+    "Extension matches",
+    signature.get(
+        "extension_matches"
+    ),
+)}
+
+</div>
+
+</section>
+
+
+{warnings_section(
+    warnings
+)}
+
+
+<section class="panel">
+
+<h2>
+    Filesystem context
+</h2>
+
+<div class="grid">
+
+{report_item(
+    "Scope",
+    filesystem.get(
+        "scope"
+    ),
+)}
+
+{report_item(
+    "Created",
+    filesystem.get(
+        "created"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "Modified",
+    filesystem.get(
+        "modified"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "Accessed",
+    filesystem.get(
+        "accessed"
+    ),
+    code=True,
+)}
+
+{report_item(
+    "Metadata changed",
+    filesystem.get(
+        "metadata_changed"
+    ),
+    code=True,
+)}
+
+</div>
+
+<p class="subtitle">
+    {e(filesystem_note)}
+</p>
+
+</section>
+
+
+{format_analysis_html(
+    format_analysis
+)}
+
+
+<section class="panel">
+
+<h2>
+    Forensic timeline
+</h2>
+
+{timeline_html(
+    timeline
+)}
+
+</section>
+
+
+<section class="panel">
+
+<h2>
+    Interesting artefacts
+</h2>
+
+<p class="subtitle">
+    Artefacts are investigative leads and are not,
+    by themselves, evidence of malicious activity.
+</p>
+
+{artefacts_html(
+    artefacts
+)}
+
+</section>
+
+
+<section class="panel">
+
+<h2>
+    Extracted metadata
+</h2>
+
+{metadata_html(
+    metadata
+)}
+
+</section>
+
+
+<section class="panel">
+
+<h2>
+    Interpretation limitations
+</h2>
+
+<ul>
+
+    <li>
+        Embedded metadata can be altered,
+        removed or generated by software.
+    </li>
+
+    <li>
+        Author or creator metadata does not
+        independently prove human authorship.
+    </li>
+
+    <li>
+        Filesystem timestamps may change
+        because of copying,
+        operating-system behaviour
+        or deliberate manipulation.
+    </li>
+
+    <li>
+        Evidence-copy filesystem timestamps
+        do not necessarily represent timestamps
+        from the original source filesystem.
+    </li>
+
+    <li>
+        Extracted URLs, domains, addresses,
+        paths and commands should be interpreted
+        in context and are not automatically malicious.
+    </li>
+
+    <li>
+        The analyzer performs static analysis
+        and does not execute the analysed file.
+    </li>
+
+</ul>
+
+</section>
+
+
+<footer>
+
+Generated by Digital Forensic File Analyzer.
+
+The original SHA-256 stored at first analysis is
+included above as the integrity baseline.
+
+</footer>
+
+
+</main>
+
+</body>
+
+</html>
+"""
+
+
+def report_item(
+    label,
+    value,
+    code=False,
+):
+
+    class_name = (
+        "value code"
+        if code
+        else "value"
+    )
+
+
+    return f"""
+<div class="item">
+
+    <span class="label">
+        {e(label)}
+    </span>
+
+    <span class="{class_name}">
+        {e(value)}
+    </span>
+
+</div>
+"""
+
+
+def verification_table(
+    history,
+):
+
+    if not history:
+
+        return """
+<p class="subtitle">
+    No integrity verification has been recorded.
+</p>
+"""
+
+
+    rows = []
+
+
+    for item in history:
+
+        rows.append(
+            f"""
+<tr>
+
+<td>
+    {e(item.get("verified_at_utc"))}
+</td>
+
+<td>
+    {e(item.get("selected_filename"))}
+</td>
+
+<td>
+    {e(item.get("status"))}
+</td>
+
+<td class="code">
+    {e(item.get("current_sha256"))}
+</td>
+
+</tr>
+"""
+        )
+
+
+    return f"""
+<table>
+
+<thead>
+
+<tr>
+<th>Verified at</th>
+<th>Selected file</th>
+<th>Status</th>
+<th>SHA-256</th>
+</tr>
+
+</thead>
+
+<tbody>
+{"".join(rows)}
+</tbody>
+
+</table>
+"""
+
+
+def warnings_section(
+    warnings,
+):
+
+    if not warnings:
+
+        return ""
+
+
+    blocks = []
+
+
+    for warning in warnings:
+
+        blocks.append(
+            f"""
+<div class="warning">
+
+<strong>
+    {e(
+        warning.get(
+            "type"
+        )
+        or warning.get(
+            "title"
+        )
+        or "Observation"
+    )}
+</strong>
+
+<br>
+
+{e(
+    warning.get(
+        "message"
+    )
+)}
+
+</div>
+"""
+        )
+
+
+    return f"""
+<section class="panel">
+
+<h2>
+    Analysis observations
+</h2>
+
+{"".join(blocks)}
+
+</section>
+"""
+
+
+def format_analysis_html(
+    analysis,
+):
+
+    if not analysis:
+
+        return ""
+
+
+    if (
+        analysis.get(
+            "status"
+        )
+        == "not_applicable"
+    ):
+
+        return ""
+
+
+    properties = (
+        analysis.get(
+            "properties"
+        )
+        or {}
+    )
+
+
+    observations = (
+        analysis.get(
+            "observations"
+        )
+        or []
+    )
+
+
+    embedded_objects = (
+        analysis.get(
+            "embedded_objects"
+        )
+        or []
+    )
+
+
+    parts = [
+        '<section class="panel">',
+
+        "<h2>"
+        "Format-specific analysis"
+        "</h2>",
+
+        '<div class="grid">',
+
+        report_item(
+            "Format",
+            analysis.get(
+                "format"
+            ),
+        ),
+
+        report_item(
+            "Status",
+            analysis.get(
+                "status"
+            ),
+        ),
+
+        "</div>",
+    ]
+
+
+    if properties:
+
+        parts.append(
+            "<h3>"
+            "Properties"
+            "</h3>"
+            "<table>"
+            "<tbody>"
+        )
+
+
+        for (
+            name,
+            value,
+        ) in properties.items():
+
+            parts.append(
+                f"""
+<tr>
+
+<td>
+    {e(
+        _humanize(
+            name
+        )
+    )}
+</td>
+
+<td class="code">
+    {e(
+        format_value(
+            value
+        )
+    )}
+</td>
+
+</tr>
+"""
+            )
+
+
+        parts.append(
+            "</tbody>"
+            "</table>"
+        )
+
+
+    if observations:
+
+        parts.append(
+            "<h3>"
+            "Format observations"
+            "</h3>"
+        )
+
+
+        for observation in observations:
+
+            parts.append(
+                f"""
+<div class="warning">
+
+<strong>
+    {e(
+        observation.get(
+            "title"
+        )
+        or "Observation"
+    )}
+</strong>
+
+<br>
+
+{e(
+    observation.get(
+        "message"
+    )
+)}
+
+</div>
+"""
+            )
+
+
+    if embedded_objects:
+
+        parts.append(
+            "<h3>"
+            "Internal objects"
+            "</h3>"
+            "<table>"
+            "<tbody>"
+        )
+
+
+        for obj in embedded_objects:
+
+            name = (
+                obj.get(
+                    "name"
+                )
+                or obj.get(
+                    "type"
+                )
+                or "Object"
+            )
+
+
+            parts.append(
+                f"""
+<tr>
+
+<td>
+    {e(name)}
+</td>
+
+<td class="code">
+    {e(
+        json.dumps(
+            obj,
+            ensure_ascii=False,
+        )
+    )}
+</td>
+
+</tr>
+"""
+            )
+
+
+        parts.append(
+            "</tbody>"
+            "</table>"
+        )
+
+
+    parts.append(
+        "</section>"
+    )
+
+
+    return "".join(
+        parts
+    )
+
+
+def timeline_html(
+    timeline,
+):
+
+    events = (
+        timeline.get(
+            "events"
+        )
+        or []
+    )
+
+
+    observations = (
+        timeline.get(
+            "observations"
+        )
+        or []
+    )
+
+
+    parts = []
+
+
+    for observation in observations:
+
+        parts.append(
+            f"""
+<div class="warning">
+
+<strong>
+    {e(
+        observation.get(
+            "title"
+        )
+    )}
+</strong>
+
+<br>
+
+{e(
+    observation.get(
+        "message"
+    )
+)}
+
+</div>
+"""
+        )
+
+
+    if not events:
+
+        parts.append(
+            """
+<p class="subtitle">
+    No recognised forensic timestamps were found.
+</p>
+"""
+        )
+
+
+    for event in events:
+
+        timestamp = (
+            event.get(
+                "timestamp_utc"
+            )
+            or event.get(
+                "timestamp_original"
+            )
+        )
+
+
+        parts.append(
+            f"""
+<div class="timeline-event">
+
+<div class="timeline-time code">
+    {e(timestamp)}
+</div>
+
+<strong>
+    {e(
+        event.get(
+            "label"
+        )
+    )}
+</strong>
+
+<div class="timeline-source">
+
+    {e(
+        event.get(
+            "source_group"
+        )
+    )}:
+
+    {e(
+        event.get(
+            "source_field"
+        )
+    )}
+
+    —
+
+    {e(
+        event.get(
+            "scope"
+        )
+    )}
+
+</div>
+
+</div>
+"""
+        )
+
+
+    return "".join(
+        parts
+    )
+
+
+def artefacts_html(
+    artefacts,
+):
+
+    categories = (
+        artefacts.get(
+            "categories"
+        )
+        or {}
+    )
+
+
+    sections = []
+
+
+    for category in categories.values():
+
+        items = (
+            category.get(
+                "items"
+            )
+            or []
+        )
+
+
+        if not items:
+
+            continue
+
+
+        rows = []
+
+
+        for item in items:
+
+            rows.append(
+                f"""
+<tr>
+
+<td class="code">
+    {e(
+        item.get(
+            "value"
+        )
+    )}
+</td>
+
+<td>
+    {e(
+        item.get(
+            "occurrences"
+        )
+    )}
+</td>
+
+<td class="code">
+    {e(
+        ", ".join(
+            item.get(
+                "offsets_hex"
+            )
+            or []
+        )
+    )}
+</td>
+
+</tr>
+"""
+            )
+
+
+        sections.append(
+            f"""
+<div class="metadata-group">
+
+<h3>
+
+    {e(
+        category.get(
+            "label"
+        )
+    )}
+
+    ({len(items)})
+
+</h3>
+
+
+<table>
+
+<thead>
+
+<tr>
+<th>Value</th>
+<th>Occurrences</th>
+<th>Offsets</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{"".join(rows)}
+
+</tbody>
+
+</table>
+
+</div>
+"""
+        )
+
+
+    if not sections:
+
+        return """
+<p class="subtitle">
+    No interesting artefacts were identified.
+</p>
+"""
+
+
+    return "".join(
+        sections
+    )
+
+
+def metadata_html(
+    metadata,
+):
+
+    if (
+        metadata.get(
+            "status"
+        )
+        != "ok"
+    ):
+
+        return f"""
+<div class="warning">
+
+{e(
+    metadata.get(
+        "error"
+    )
+    or "Metadata extraction failed."
+)}
+
+</div>
+"""
+
+
+    categories = (
+        metadata.get(
+            "categories"
+        )
+        or {}
+    )
+
+
+    sections = []
+
+
+    for (
+        category_name,
+        fields,
+    ) in categories.items():
+
+        if not fields:
+
+            continue
+
+
+        rows = []
+
+
+        for field in fields:
+
+            rows.append(
+                f"""
+<tr>
+
+<td>
+
+    {e(
+        field.get(
+            "group"
+        )
+    )}:
+
+    {e(
+        field.get(
+            "name"
+        )
+    )}
+
+</td>
+
+<td class="code">
+
+    {e(
+        format_value(
+            field.get(
+                "value"
+            )
+        )
+    )}
+
+</td>
+
+</tr>
+"""
+            )
+
+
+        sections.append(
+            f"""
+<div class="metadata-group">
+
+<h3>
+    {e(
+        _humanize(
+            category_name
+        )
+    )}
+</h3>
+
+<table>
+
+<tbody>
+{"".join(rows)}
+</tbody>
+
+</table>
+
+</div>
+"""
+        )
+
+
+    if not sections:
+
+        return """
+<p class="subtitle">
+    No metadata was extracted.
+</p>
+"""
+
+
+    return "".join(
+        sections
+    )
+
+
+def format_value(
+    value,
+):
+
+    if isinstance(
+        value,
+        (
+            dict,
+            list,
+            tuple,
+        ),
+    ):
+
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+        )
+
+
+    return value
+
+
+def e(
+    value,
+):
+
+    if value is None:
+
+        return "Unavailable"
+
+
+    return html.escape(
+        str(
+            value
+        )
+    )
+
+
+# -----------------------------------------------------------------------------
+# PDF forensic report
+# -----------------------------------------------------------------------------
+
+def build_pdf_report(
+    evidence: dict,
+    verification_history: list[dict],
+) -> bytes:
+
+    analysis = (
+        evidence.get(
+            "analysis"
+        )
+        or {}
+    )
+
+
+    # -------------------------------------------------------------------------
+    # Determine whether this evidence came through Logical Acquisition.
+    #
+    # This matters because filesystem timestamps generated while analysing the
+    # working copy are not the original source filesystem timestamps.
+    # -------------------------------------------------------------------------
+
+    acquisition = (
+        analysis.get(
+            "acquisition"
+        )
+        or {}
+    )
+
+
+    evidence_info = (
+        analysis.get(
+            "evidence"
+        )
+        or {}
+    )
+
+
+    is_logical_acquisition = (
+        evidence_info.get(
+            "mode"
+        )
+        == "logical_acquisition"
+    )
+
+
+    overview = (
+        analysis.get(
+            "overview"
+        )
+        or {}
+    )
+
+
+    hashes = (
+        analysis.get(
+            "hashes"
+        )
+        or {}
+    )
+
+
+    signature = (
+        analysis.get(
+            "signature"
+        )
+        or {}
+    )
+
+
+    filesystem = (
+        analysis.get(
+            "filesystem"
+        )
+        or {}
+    )
+
+
+    timeline = (
+        analysis.get(
+            "timeline"
+        )
+        or {}
+    )
+
+
+    artefacts = (
+        analysis.get(
+            "artefacts"
+        )
+        or {}
+    )
+
+
+    metadata = (
+        analysis.get(
+            "metadata"
+        )
+        or {}
+    )
+
+
+    format_analysis = (
+        analysis.get(
+            "format_analysis"
+        )
+        or {}
+    )
+
+
+    warnings = (
+        analysis.get(
+            "warnings"
+        )
+        or []
+    )
+
+
+    # Retained for the forthcoming dedicated acquisition report.
+    _ = acquisition
+
+
     buffer = io.BytesIO()
 
 
     document = SimpleDocTemplate(
         buffer,
+
         pagesize=A4,
 
-        rightMargin=16 * mm,
-        leftMargin=16 * mm,
-        topMargin=18 * mm,
-        bottomMargin=18 * mm,
+        rightMargin=
+            16 * mm,
 
-        title=(
-            "Forensic File Analysis Report"
-        ),
+        leftMargin=
+            16 * mm,
 
-        author=(
-            "Digital Forensic File Analyzer"
-        ),
+        topMargin=
+            18 * mm,
+
+        bottomMargin=
+            18 * mm,
+
+        title=
+            "Forensic File Analysis Report",
+
+        author=
+            "Digital Forensic File Analyzer",
     )
 
 
@@ -1401,198 +2055,205 @@ def build_pdf_report(
     body_style = ParagraphStyle(
         "ReportBody",
 
-        parent=(
+        parent=
             base_styles[
                 "BodyText"
-            ]
-        ),
+            ],
 
         fontName=
             "Helvetica",
 
-        fontSize=9,
+        fontSize=
+            9,
 
-        leading=12,
+        leading=
+            12,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#273142"
-            )
-        ),
+            ),
 
-        spaceAfter=5,
+        spaceAfter=
+            5,
     )
 
 
     small_style = ParagraphStyle(
         "ReportSmall",
 
-        parent=body_style,
+        parent=
+            body_style,
 
-        fontSize=7.5,
+        fontSize=
+            7.5,
 
-        leading=10,
+        leading=
+            10,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#667085"
-            )
-        ),
+            ),
     )
 
 
     title_style = ParagraphStyle(
         "ReportTitle",
 
-        parent=(
+        parent=
             base_styles[
                 "Title"
-            ]
-        ),
+            ],
 
         fontName=
             "Helvetica-Bold",
 
-        fontSize=21,
+        fontSize=
+            21,
 
-        leading=25,
+        leading=
+            25,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#0F1C2E"
-            )
-        ),
+            ),
 
         alignment=
             TA_LEFT,
 
-        spaceAfter=6,
+        spaceAfter=
+            6,
     )
 
 
     eyebrow_style = ParagraphStyle(
         "ReportEyebrow",
 
-        parent=small_style,
+        parent=
+            small_style,
 
         fontName=
             "Helvetica-Bold",
 
-        fontSize=7,
+        fontSize=
+            7,
 
-        leading=9,
+        leading=
+            9,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#4169E1"
-            )
-        ),
+            ),
 
-        spaceAfter=4,
+        spaceAfter=
+            4,
     )
 
 
     section_style = ParagraphStyle(
         "ReportSection",
 
-        parent=(
+        parent=
             base_styles[
                 "Heading2"
-            ]
-        ),
+            ],
 
         fontName=
             "Helvetica-Bold",
 
-        fontSize=12,
+        fontSize=
+            12,
 
-        leading=15,
+        leading=
+            15,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#172033"
-            )
-        ),
+            ),
 
-        spaceBefore=10,
+        spaceBefore=
+            10,
 
-        spaceAfter=7,
+        spaceAfter=
+            7,
     )
 
 
-    subsection_style = (
-        ParagraphStyle(
-            "ReportSubsection",
+    subsection_style = ParagraphStyle(
+        "ReportSubsection",
 
-            parent=(
-                base_styles[
-                    "Heading3"
-                ]
+        parent=
+            base_styles[
+                "Heading3"
+            ],
+
+        fontName=
+            "Helvetica-Bold",
+
+        fontSize=
+            9.5,
+
+        leading=
+            12,
+
+        textColor=
+            colors.HexColor(
+                "#344054"
             ),
 
-            fontName=
-                "Helvetica-Bold",
+        spaceBefore=
+            8,
 
-            fontSize=9.5,
-
-            leading=12,
-
-            textColor=(
-                colors.HexColor(
-                    "#344054"
-                )
-            ),
-
-            spaceBefore=8,
-
-            spaceAfter=5,
-        )
+        spaceAfter=
+            5,
     )
 
 
     code_style = ParagraphStyle(
         "ReportCode",
 
-        parent=small_style,
+        parent=
+            small_style,
 
         fontName=
             "Courier",
 
-        fontSize=7,
+        fontSize=
+            7,
 
-        leading=9,
+        leading=
+            9,
 
-        textColor=(
+        textColor=
             colors.HexColor(
                 "#1D2939"
-            )
-        ),
+            ),
 
-        # Allows SHA-256 values and long
-        # paths to wrap instead of leaving
-        # the page.
         wordWrap=
             "CJK",
     )
 
 
-    header_cell_style = (
-        ParagraphStyle(
-            "ReportHeaderCell",
+    header_cell_style = ParagraphStyle(
+        "ReportHeaderCell",
 
-            parent=body_style,
+        parent=
+            body_style,
 
-            fontName=
-                "Helvetica-Bold",
+        fontName=
+            "Helvetica-Bold",
 
-            fontSize=7.5,
+        fontSize=
+            7.5,
 
-            textColor=(
-                colors.HexColor(
-                    "#344054"
-                )
+        textColor=
+            colors.HexColor(
+                "#344054"
             ),
-        )
     )
 
 
@@ -1600,7 +2261,7 @@ def build_pdf_report(
 
 
     # -------------------------------------------------------------------------
-    # Helpers used by this report
+    # Local helpers
     # -------------------------------------------------------------------------
 
     def add_section(
@@ -1624,6 +2285,7 @@ def build_pdf_report(
     ):
 
         if not rows:
+
             return
 
 
@@ -1687,79 +2349,84 @@ def build_pdf_report(
             colWidths=
                 widths,
 
-            repeatRows=(
-                1
-                if header
-                else 0
-            ),
+            repeatRows=
+                (
+                    1
+                    if header
+                    else 0
+                ),
 
             hAlign=
                 "LEFT",
         )
 
 
+        commands = [
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.35,
+                colors.HexColor(
+                    "#D8DEE8"
+                ),
+            ),
+
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "TOP",
+            ),
+
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                6,
+            ),
+
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                6,
+            ),
+
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                5,
+            ),
+
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                5,
+            ),
+        ]
+
+
+        if header:
+
+            commands.insert(
+                0,
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.HexColor(
+                        "#F5F7FA"
+                    ),
+                ),
+            )
+
+
         table.setStyle(
             TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
-
-                        (
-                            colors.HexColor(
-                                "#F5F7FA"
-                            )
-                            if header
-                            else colors.white
-                        ),
-                    ),
-
-                    (
-                        "GRID",
-                        (0, 0),
-                        (-1, -1),
-                        0.35,
-                        colors.HexColor(
-                            "#D8DEE8"
-                        ),
-                    ),
-
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "TOP",
-                    ),
-
-                    (
-                        "LEFTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-
-                    (
-                        "RIGHTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-
-                    (
-                        "TOPPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-
-                    (
-                        "BOTTOMPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-                ]
+                commands
             )
         )
 
@@ -1778,7 +2445,7 @@ def build_pdf_report(
 
 
     # -------------------------------------------------------------------------
-    # Report header
+    # Header
     # -------------------------------------------------------------------------
 
     story.append(
@@ -1876,6 +2543,7 @@ def build_pdf_report(
 
         widths=[
             45 * mm,
+
             document.width
             - 45 * mm,
         ],
@@ -1917,15 +2585,12 @@ def build_pdf_report(
 
         widths=[
             45 * mm,
+
             document.width
             - 45 * mm,
         ],
     )
 
-
-    # -------------------------------------------------------------------------
-    # Verification history
-    # -------------------------------------------------------------------------
 
     story.append(
         Paragraph(
@@ -1947,9 +2612,7 @@ def build_pdf_report(
         ]
 
 
-        for item in (
-            verification_history
-        ):
+        for item in verification_history:
 
             verification_rows.append(
                 [
@@ -1979,6 +2642,7 @@ def build_pdf_report(
                 35 * mm,
                 35 * mm,
                 22 * mm,
+
                 document.width
                 - 92 * mm,
             ],
@@ -2049,6 +2713,7 @@ def build_pdf_report(
 
         widths=[
             45 * mm,
+
             document.width
             - 45 * mm,
         ],
@@ -2056,7 +2721,7 @@ def build_pdf_report(
 
 
     # -------------------------------------------------------------------------
-    # Analysis warnings / observations
+    # Analysis observations
     # -------------------------------------------------------------------------
 
     if warnings:
@@ -2076,6 +2741,9 @@ def build_pdf_report(
                             warning.get(
                                 "type"
                             )
+                            or warning.get(
+                                "title"
+                            )
                             or "Observation"
                         )
                         + "</b>"
@@ -2086,7 +2754,6 @@ def build_pdf_report(
                             )
                         )
                     ),
-
                     body_style,
                 )
             )
@@ -2149,13 +2816,30 @@ def build_pdf_report(
 
         widths=[
             45 * mm,
+
             document.width
             - 45 * mm,
         ],
     )
 
 
-    if filesystem.get(
+    if is_logical_acquisition:
+
+        story.append(
+            Paragraph(
+                (
+                    "These timestamps describe the "
+                    "analyzer working copy. Original "
+                    "source filesystem timestamps were "
+                    "captured separately during logical "
+                    "acquisition."
+                ),
+                small_style,
+            )
+        )
+
+
+    elif filesystem.get(
         "warning"
     ):
 
@@ -2172,7 +2856,7 @@ def build_pdf_report(
 
 
     # -------------------------------------------------------------------------
-    # Stage 8 format-specific analysis
+    # Format-specific analysis
     # -------------------------------------------------------------------------
 
     if (
@@ -2213,7 +2897,6 @@ def build_pdf_report(
                     )
                     + "</b>"
                 ),
-
                 body_style,
             )
         )
@@ -2244,12 +2927,12 @@ def build_pdf_report(
                     for (
                         name,
                         value,
-                    )
-                    in properties.items()
+                    ) in properties.items()
                 ],
 
                 widths=[
                     55 * mm,
+
                     document.width
                     - 55 * mm,
                 ],
@@ -2296,7 +2979,6 @@ def build_pdf_report(
                                 )
                             )
                         ),
-
                         body_style,
                     )
                 )
@@ -2328,9 +3010,7 @@ def build_pdf_report(
             ]
 
 
-            for obj in (
-                embedded_objects
-            ):
+            for obj in embedded_objects:
 
                 object_rows.append(
                     [
@@ -2357,6 +3037,7 @@ def build_pdf_report(
 
                 widths=[
                     55 * mm,
+
                     document.width
                     - 55 * mm,
                 ],
@@ -2407,7 +3088,6 @@ def build_pdf_report(
                         )
                     )
                 ),
-
                 body_style,
             )
         )
@@ -2474,6 +3154,7 @@ def build_pdf_report(
                 41 * mm,
                 46 * mm,
                 55 * mm,
+
                 document.width
                 - 142 * mm,
             ],
@@ -2496,7 +3177,7 @@ def build_pdf_report(
 
 
     # -------------------------------------------------------------------------
-    # Interesting artefacts
+    # Artefacts
     # -------------------------------------------------------------------------
 
     add_section(
@@ -2521,8 +3202,7 @@ def build_pdf_report(
         for (
             name,
             category,
-        )
-        in categories.items()
+        ) in categories.items()
 
         if category.get(
             "items"
@@ -2569,7 +3249,6 @@ def build_pdf_report(
                         )
                         + f" ({len(items)})"
                     ),
-
                     subsection_style,
                 )
             )
@@ -2650,7 +3329,6 @@ def build_pdf_report(
                         "failed."
                     )
                 ),
-
                 body_style,
             )
         )
@@ -2684,11 +3362,10 @@ def build_pdf_report(
             for (
                 category_name,
                 fields,
-            ) in (
-                metadata_categories.items()
-            ):
+            ) in metadata_categories.items():
 
                 if not fields:
+
                     continue
 
 
@@ -2699,7 +3376,6 @@ def build_pdf_report(
                                 category_name
                             )
                         ),
-
                         subsection_style,
                     )
                 )
@@ -2736,6 +3412,7 @@ def build_pdf_report(
 
                     widths=[
                         58 * mm,
+
                         document.width
                         - 58 * mm,
                     ],
@@ -2800,7 +3477,6 @@ def build_pdf_report(
                         limitation
                     )
                 ),
-
                 body_style,
             )
         )
@@ -2827,7 +3503,120 @@ def build_pdf_report(
 
 
 # -----------------------------------------------------------------------------
-# PDF helper functions
+# Shared reporting helpers
+# -----------------------------------------------------------------------------
+
+def _filesystem_context_note(
+    analysis: dict,
+    filesystem: dict,
+) -> str | None:
+
+    evidence_info = (
+        analysis.get(
+            "evidence"
+        )
+        or {}
+    )
+
+
+    if (
+        evidence_info.get(
+            "mode"
+        )
+        == "logical_acquisition"
+    ):
+
+        return (
+            "These timestamps describe the analyzer "
+            "working copy. Original source filesystem "
+            "timestamps were captured separately "
+            "during logical acquisition."
+        )
+
+
+    return filesystem.get(
+        "warning"
+    )
+
+
+def _humanize(
+    value,
+) -> str:
+
+    if not value:
+
+        return "Other"
+
+
+    return (
+        str(
+            value
+        )
+        .replace(
+            "_",
+            " ",
+        )
+        .title()
+    )
+
+
+def _format_bytes(
+    value,
+) -> str:
+
+    if value is None:
+
+        return "Unavailable"
+
+
+    try:
+
+        size = float(
+            value
+        )
+
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        return str(
+            value
+        )
+
+
+    units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+        "TB",
+    ]
+
+
+    index = 0
+
+
+    while (
+        size >= 1024
+        and index
+        < len(units) - 1
+    ):
+
+        size /= 1024
+
+        index += 1
+
+
+    return (
+        f"{size:.2f} "
+        f"{units[index]}"
+    )
+
+
+# -----------------------------------------------------------------------------
+# PDF helpers
 # -----------------------------------------------------------------------------
 
 def _draw_pdf_footer(
@@ -2932,15 +3721,10 @@ def _pdf_safe(
         return "Unavailable"
 
 
-    text = str(
-        value
-    )
-
-
-    # Avoid problematic Unicode dashes
-    # in some PDF rendering environments.
     text = (
-        text
+        str(
+            value
+        )
         .replace(
             "—",
             "-",
@@ -2961,20 +3745,8 @@ def _pdf_humanize(
     value,
 ):
 
-    if not value:
-
-        return "Other"
-
-
-    return (
-        str(
-            value
-        )
-        .replace(
-            "_",
-            " ",
-        )
-        .title()
+    return _humanize(
+        value
     )
 
 
@@ -3011,54 +3783,8 @@ def _pdf_format_bytes(
     value,
 ):
 
-    if value is None:
-
-        return "Unavailable"
-
-
-    try:
-
-        size = float(
-            value
-        )
-
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return str(
-            value
-        )
-
-
-    units = [
-        "B",
-        "KB",
-        "MB",
-        "GB",
-        "TB",
-    ]
-
-
-    index = 0
-
-
-    while (
-        size >= 1024
-        and index
-        < len(units) - 1
-    ):
-
-        size /= 1024
-
-        index += 1
-
-
-    return (
-        f"{size:.2f} "
-        f"{units[index]}"
+    return _format_bytes(
+        value
     )
 
 
@@ -3077,7 +3803,10 @@ def _pdf_looks_like_code(
 
 
     if (
-        len(text) >= 32
+        len(
+            text
+        )
+        >= 32
         and " " not in text
     ):
 

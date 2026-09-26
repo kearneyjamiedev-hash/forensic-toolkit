@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Logical Evidence Collection</title>
+<link href="/static/css/styles.css" rel="stylesheet"/>
+</head>
+<body>
+<header class="topbar">
+<div class="brand">
+<div class="eyebrow">
+            Digital Forensic Analysis
+        </div>
+<h1>
+            Logical Evidence Collection
+        </h1>
+</div>
+<div class="topbar-actions">
+<a class="nav-link" href="/forensic">Full Forensics</a><a class="nav-link" href="/">Dashboard</a>
+<div class="status">
+<span class="status-dot"></span>
+
+            Local collector
+
+        </div>
+</div>
+</header>
+<main class="workflow-page">
+<section class="panel workflow-hero">
+<div>
+<div class="section-label">
+                Evidence acquisition
+            </div>
+<h2>
+                Collect and preserve a source file
+            </h2>
+<p>
+                Capture source filesystem context, create a verified master
+                evidence copy, and prepare a separate working copy for analysis.
+                The forensic examination itself happens on the next screen.
+            </p>
+</div>
+<div class="workflow-summary-card">
+<strong>
+                Logical acquisition
+            </strong>
+<span>
+                Source → verified master → working copy
+            </span>
+</div>
+</section>
+<nav aria-label="Collection progress" class="workflow-progress">
+<div class="workflow-progress-step active">
+<span>1</span>
+<div>
+<strong>Case details</strong>
+<small>Describe the collection</small>
+</div>
+</div>
+<div class="workflow-progress-step">
+<span>2</span>
+<div>
+<strong>Select source</strong>
+<small>Use the native file picker</small>
+</div>
+</div>
+<div class="workflow-progress-step">
+<span>3</span>
+<div>
+<strong>Acquire</strong>
+<small>Create verified copies</small>
+</div>
+</div>
+</nav>
+<section class="panel workflow-panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                    Step 1
+                </div>
+<h3>
+                    Case and evidence details
+                </h3>
+<p class="panel-description">
+                    These details are written into the acquisition manifest
+                    and acquisition report.
+                </p>
+</div>
+</div>
+<div class="acquisition-form-grid">
+<label>
+<span class="property-name">
+                    Case / reference
+                </span>
+<input class="text-input" id="case-reference" placeholder="CASE-2026-001" type="text"/>
+</label>
+<label>
+<span class="property-name">
+                    Collector / analyst
+                </span>
+<input class="text-input" id="collector-name" placeholder="Analyst name" type="text"/>
+</label>
+<label class="acquisition-description-field">
+<span class="property-name">
+                    Evidence description
+                </span>
+<input class="text-input" id="evidence-description" placeholder="Document supplied for examination" type="text"/>
+</label>
+</div>
+</section>
+<section class="panel workflow-panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                    Step 2
+                </div>
+<h3>
+                    Select original source evidence
+                </h3>
+<p class="panel-description">
+                    File selection is performed by the trusted local collector
+                    using the operating system's native file picker.
+                </p>
+</div>
+<button class="secondary-button" disabled="" id="browse-source-button">
+                Browse source evidence
+            </button>
+</div>
+<div class="empty-state" id="source-empty">
+            No source evidence selected.
+        </div>
+<div class="hidden" id="source-preview">
+<div class="source-path-card">
+<span class="property-name">
+                    Selected source
+                </span>
+<span class="source-path-value" id="source-path"></span>
+</div>
+<div class="property-grid" id="source-properties"></div>
+</div>
+</section>
+<section class="panel workflow-panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">
+                    Step 3
+                </div>
+<h3>
+                    Create verified evidence copies
+                </h3>
+<p class="panel-description">
+                    The source is hashed while the master copy is created.
+                    A working copy is then created from the verified master.
+                </p>
+</div>
+<button class="primary-button" disabled="" id="acquire-button">
+                Acquire evidence
+            </button>
+</div>
+<div class="hidden loading-inline" id="acquisition-loading">
+<div class="loader"></div>
+<span>
+                Creating and verifying evidence copies...
+            </span>
+</div>
+<div class="hidden acquisition-complete" id="acquisition-result">
+<div class="section-heading compact-heading">
+<div>
+<div class="eyebrow">
+                        Collection result
+                    </div>
+<h3>
+                        Acquisition complete
+                    </h3>
+<p class="panel-description" id="acquisition-id"></p>
+</div>
+<span class="badge" id="acquisition-badge"></span>
+</div>
+<div class="hash-list" id="acquisition-integrity"></div>
+<div class="info-box" id="acquisition-observation"></div>
+<div class="workflow-next-grid">
+<article class="workflow-action-card">
+<div>
+<div class="section-label">
+                            Documentation
+                        </div>
+<h4>
+                            Acquisition records
+                        </h4>
+<p>
+                            Download the collection report or the raw manifest.
+                            These are available immediately after acquisition.
+                        </p>
+</div>
+<div class="report-actions">
+<a aria-disabled="true" class="secondary-button button-link disabled-link" href="#" id="acquisition-report-link">
+                            Acquisition PDF
+                        </a>
+<a aria-disabled="true" class="secondary-button button-link disabled-link" href="#" id="acquisition-manifest-link">
+                            Manifest JSON
+                        </a>
+</div>
+</article>
+<article class="workflow-action-card workflow-action-primary">
+<div>
+<div class="section-label">
+                            Next step
+                        </div>
+<h4>
+                            Examine the working copy
+                        </h4>
+<p>
+                            Continue to a separate analysis workspace.
+                            The master evidence copy remains preserved.
+                        </p>
+</div>
+<a aria-disabled="true" class="primary-button button-link disabled-link" href="#" id="continue-analysis-link">
+                        Continue to forensic analysis
+                    </a>
+</article>
+</div>
+</div>
+</section>
+</main>
+<footer>
+<strong>
+        Digital Forensic File Analyzer
+    </strong>
+<span>
+        Logical collection records observed source context; it does not claim
+        hardware write-blocked acquisition.
+    </span>
+</footer>
+<script src="/static/js/local.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+/* Shared frontend helpers will be extracted here during the next refactor pass. */

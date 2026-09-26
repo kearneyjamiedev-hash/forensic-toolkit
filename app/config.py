@@ -14,6 +14,16 @@ EXIFTOOL_PATH = os.getenv(
     str(BASE_DIR / "tools" / "exiftool" / "exiftool.exe")
 )
 
+import os
+from pathlib import Path
+
+
+LOCAL_EVIDENCE_ROOT = Path(
+    os.getenv(
+        "LOCAL_EVIDENCE_ROOT",
+        r"C:\ForensicEvidence",
+    )
+).resolve()
 
 MAX_UPLOAD_SIZE = 250 * 1024 * 1024  # 250 MB
 

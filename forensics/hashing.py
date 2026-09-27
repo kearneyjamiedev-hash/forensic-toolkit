@@ -7,8 +7,16 @@ BUFFER_SIZE = 1024 * 1024
 
 def calculate_hashes(file_path: Path) -> dict:
     sha256 = hashlib.sha256()
-    sha1 = hashlib.sha1()
-    md5 = hashlib.md5()
+
+    # SHA-1 and MD5 are retained as secondary forensic/reference hashes only.
+    # SHA-256 is the application's integrity/security baseline.
+    sha1 = hashlib.sha1(
+        usedforsecurity=False
+    )
+
+    md5 = hashlib.md5(
+        usedforsecurity=False
+    )
 
     with file_path.open("rb") as file:
         while chunk := file.read(BUFFER_SIZE):

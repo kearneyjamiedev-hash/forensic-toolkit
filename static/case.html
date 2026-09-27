@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Workspace | Digital Forensic Toolkit</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=case-workspace-v05">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <div class="eyebrow">Investigation Workspace</div>
+        <h1 id="case-header-reference">Case</h1>
+    </div>
+
+    <div class="topbar-actions">
+        <a class="nav-link" href="/cases">← All Cases</a>
+        <div class="status">
+            <span class="status-dot"></span>
+            <span id="case-header-status">Loading</span>
+        </div>
+    </div>
+</header>
+
+<main class="case-page-shell">
+    <div id="case-error" class="case-message case-message-error" aria-live="polite"></div>
+
+    <section id="case-workspace" hidden>
+        <section class="case-workspace-head">
+            <div class="case-workspace-title">
+                <div class="section-label" id="case-reference-label">Case</div>
+                <h2 id="case-title-display">Loading case…</h2>
+                <p id="case-description-display">No description supplied.</p>
+            </div>
+
+            <div class="case-workspace-meta">
+                <div class="case-state-line">
+                    <span>Case status</span>
+                    <strong id="case-status-display">OPEN</strong>
+                </div>
+
+                <button id="close-case-button" class="secondary-button" type="button">Close Case</button>
+
+                <div class="case-created-value" id="case-created-display"></div>
+                <div id="case-status-message" class="case-message" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <nav class="case-tabs" aria-label="Case workspace sections">
+            <button class="case-tab is-active" type="button" data-tab="overview" aria-selected="true">Overview</button>
+            <button class="case-tab" type="button" data-tab="evidence" aria-selected="false">Evidence</button>
+            <button class="case-tab" type="button" data-tab="log" aria-selected="false">Investigation Log</button>
+        </nav>
+
+        <section class="case-tab-panel" data-panel="overview">
+            <section class="panel case-overview-panel">
+                <section class="case-metrics" aria-label="Case overview">
+                    <div class="case-metric">
+                        <span>Evidence</span>
+                        <strong id="case-evidence-count">0</strong>
+                    </div>
+
+                    <div class="case-metric">
+                        <span>Investigation entries</span>
+                        <strong id="case-entry-count">0</strong>
+                    </div>
+
+                    <div class="case-metric">
+                        <span>Examiner</span>
+                        <strong id="case-examiner-display">—</strong>
+                    </div>
+
+                    <div class="case-metric">
+                        <span>Last updated</span>
+                        <strong id="case-updated-display">—</strong>
+                    </div>
+                </section>
+
+                <div class="case-summary-body">
+                    <div class="panel-heading">
+                        <div>
+                            <div class="eyebrow">Case summary</div>
+                            <h3>Investigation context</h3>
+                        </div>
+                    </div>
+
+                    <dl class="case-overview-fields">
+                        <div>
+                            <dt>Reference</dt>
+                            <dd id="overview-reference">—</dd>
+                        </div>
+                        <div>
+                            <dt>Status</dt>
+                            <dd id="overview-status">—</dd>
+                        </div>
+                        <div>
+                            <dt>Created</dt>
+                            <dd id="overview-created">—</dd>
+                        </div>
+                        <div>
+                            <dt>Closed</dt>
+                            <dd id="overview-closed">—</dd>
+                        </div>
+                    </dl>
+
+                    <div class="case-context-block">
+                        <span>Description</span>
+                        <p id="overview-description">No description supplied.</p>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <section class="case-tab-panel" data-panel="evidence" hidden>
+            <section class="panel case-evidence-panel">
+                <div class="panel-heading">
+                    <div>
+                        <div class="eyebrow">Evidence collection</div>
+                        <h3>Associated evidence</h3>
+                        <p class="panel-description">
+                            Link evidence already stored by the forensic toolkit. The case references the
+                            existing evidence record and SHA-256 baseline.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="case-evidence-toolbar">
+                    <label>
+                        <span>Add existing evidence</span>
+                        <select id="available-evidence" class="case-select">
+                            <option value="">Loading evidence…</option>
+                        </select>
+                    </label>
+
+                    <button id="attach-evidence-button" class="primary-button" type="button" disabled>
+                        Attach Evidence
+                    </button>
+
+                    <a class="secondary-button button-link" href="/forensic">Analyse New File</a>
+                    <a class="secondary-button button-link" href="/local">Acquire Evidence</a>
+                </div>
+
+                <div id="case-evidence-message" class="case-message" aria-live="polite"></div>
+
+                <div id="case-evidence-list" class="case-evidence-list">
+                    <div class="empty-state">Loading evidence…</div>
+                </div>
+            </section>
+        </section>
+
+        <section class="case-tab-panel" data-panel="log" hidden>
+            <section class="case-notebook-layout">
+                <aside class="case-note-composer">
+                    <div class="panel-heading">
+                        <div>
+                            <div class="eyebrow">Investigator notebook</div>
+                            <h3>Add investigation entry</h3>
+                            <p class="panel-description">
+                                Committed entries are preserved as history. Corrections create a new
+                                linked entry instead of overwriting the original.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="investigation-entry-form" class="case-form">
+                        <div class="case-entry-primary-fields">
+                            <label>
+                                <span>Entry type</span>
+                                <select id="entry-type" class="case-select" required>
+                                    <option value="OBSERVATION">Observation</option>
+                                    <option value="ACTION_TAKEN">Action Taken</option>
+                                    <option value="COMMAND_EXECUTED">Command Executed</option>
+                                    <option value="EVIDENCE_IDENTIFIED">Evidence Identified</option>
+                                    <option value="FINDING">Finding</option>
+                                    <option value="HYPOTHESIS">Hypothesis</option>
+                                    <option value="VERIFICATION">Verification</option>
+                                    <option value="GENERAL_NOTE">General Note</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                <span>Examiner</span>
+                                <input class="text-input" id="entry-examiner" maxlength="200" required>
+                            </label>
+
+                            <label class="case-field-wide">
+                                <span>Linked evidence (optional)</span>
+                                <select id="entry-evidence" class="case-select">
+                                    <option value="">No linked evidence</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label>
+                            <span>Entry</span>
+                            <textarea id="entry-content" class="case-textarea case-note-textarea" maxlength="10000" rows="6" required></textarea>
+                        </label>
+
+                        <div id="entry-form-message" class="case-message" aria-live="polite"></div>
+
+                        <div class="case-note-actions">
+                            <button id="add-entry-button" class="primary-button" type="submit">Commit Entry</button>
+                        </div>
+                    </form>
+
+                    <form id="amendment-form" class="case-form case-amendment-form" hidden>
+                        <div class="case-amendment-heading">
+                            <div>
+                                <span>Correction</span>
+                                <strong id="amendment-target-label">Entry</strong>
+                            </div>
+                            <button id="cancel-amendment-button" class="secondary-button" type="button">Cancel</button>
+                        </div>
+
+                        <label>
+                            <span>Examiner</span>
+                            <input class="text-input" id="amendment-examiner" maxlength="200" required>
+                        </label>
+
+                        <label>
+                            <span>Linked evidence (optional)</span>
+                            <select id="amendment-evidence" class="case-select">
+                                <option value="">Use original entry link</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            <span>Correction / clarification</span>
+                            <textarea id="amendment-content" class="case-textarea case-note-textarea" maxlength="10000" rows="5" required></textarea>
+                        </label>
+
+                        <div id="amendment-message" class="case-message" aria-live="polite"></div>
+                        <button id="commit-amendment-button" class="primary-button" type="submit">Commit Correction</button>
+                    </form>
+                </aside>
+
+                <section class="case-log-workspace">
+                    <div class="panel-heading case-log-heading">
+                        <div>
+                            <div class="eyebrow">Chronological record</div>
+                            <h3>Investigation Log</h3>
+                        </div>
+                        <span id="entry-count-label" class="case-count">0 entries</span>
+                    </div>
+
+                    <div class="case-log-filters">
+                        <label>
+                            <span>Type</span>
+                            <select id="entry-filter-type" class="case-select">
+                                <option value="">All types</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            <span>Evidence</span>
+                            <select id="entry-filter-evidence" class="case-select">
+                                <option value="">All evidence</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div id="investigation-log" class="case-investigation-log">
+                        <div class="empty-state">Loading investigation entries…</div>
+                    </div>
+                </section>
+            </section>
+        </section>
+    </section>
+</main>
+
+<footer>
+    <strong>Digital Forensic Toolkit</strong>
+    <span>Notebook timestamps are application-recorded UTC timestamps, not independently trusted external timestamps.</span>
+</footer>
+
+<script src="/static/js/case.js?v=3"></script>
+</body>
+</html>

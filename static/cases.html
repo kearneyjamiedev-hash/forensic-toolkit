@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cases | Digital Forensic Toolkit</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=case-workspace-v05">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <div class="eyebrow">Investigation Management</div>
+        <h1>Forensic Cases</h1>
+    </div>
+    <div class="topbar-actions">
+        <a class="nav-link" href="/">← Dashboard</a>
+        <div class="status">
+            <span class="status-dot"></span>
+            <span>Local case workspace</span>
+        </div>
+    </div>
+</header>
+
+<main class="case-page-shell">
+    <section class="case-index-intro">
+        <div>
+            <div class="section-label">Case workspace</div>
+            <h2>Investigation cases</h2>
+            <p>
+                Organise existing forensic evidence into investigations without copying evidence
+                or re-running the shared analysis engine.
+            </p>
+        </div>
+
+        <div class="case-assurance">
+            <strong>Evidence remains authoritative</strong>
+            <span>Cases reference existing evidence IDs and their stored SHA-256 baselines.</span>
+        </div>
+    </section>
+
+    <section class="case-layout">
+        <section class="panel case-form-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">New investigation</div>
+                    <h3>Create case</h3>
+                </div>
+            </div>
+
+            <form id="case-create-form" class="case-form">
+                <label>
+                    <span>Case reference</span>
+                    <input class="text-input" id="case-reference" name="case_reference" maxlength="120" placeholder="DF-2026-001" required>
+                </label>
+
+                <label>
+                    <span>Title</span>
+                    <input class="text-input" id="case-title" name="title" maxlength="200" placeholder="Suspected document tampering" required>
+                </label>
+
+                <label>
+                    <span>Examiner</span>
+                    <input class="text-input" id="case-examiner" name="examiner" maxlength="200" placeholder="Examiner name" required>
+                </label>
+
+                <label>
+                    <span>Description</span>
+                    <textarea class="case-textarea" id="case-description" name="description" maxlength="4000" rows="4" placeholder="Scope, context or investigation objective"></textarea>
+                </label>
+
+                <div id="case-form-message" class="case-message" aria-live="polite"></div>
+                <button class="primary-button" id="create-case-button" type="submit">Create Case</button>
+            </form>
+        </section>
+
+        <section class="panel case-list-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">Investigations</div>
+                    <h3>Current cases</h3>
+                </div>
+                <span id="case-count" class="case-count">0 cases</span>
+            </div>
+
+            <div id="case-list" class="case-list" aria-live="polite">
+                <div class="empty-state">Loading cases…</div>
+            </div>
+        </section>
+    </section>
+</main>
+
+<footer>
+    <strong>Digital Forensic Toolkit</strong>
+    <span>Case records organise investigation context; they do not replace evidence integrity verification.</span>
+</footer>
+
+<script src="/static/js/cases.js?v=2"></script>
+</body>
+</html>

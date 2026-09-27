@@ -15,6 +15,7 @@ from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from app.audit_api import router as audit_router
+from app.case_api import router as case_router
 
 from forensics.audit_log import (
 
@@ -23,6 +24,8 @@ from forensics.audit_log import (
     record_audit_event,
 
 )
+
+from forensics.case_store import init_case_db
 
 from fastapi import (
 
@@ -204,6 +207,9 @@ async def lifespan(
 
     init_db()
 
+    # Initialise case-management tables in the evidence database.
+    init_case_db()
+
     # Initialise tamper-evident application audit database.
     init_audit_db()
 
@@ -247,6 +253,9 @@ app.add_middleware(
 
 # Read-only audit trail API.
 app.include_router(audit_router)
+
+# Case-management API.
+app.include_router(case_router)
 
 # -----------------------------------------------------------------------------
 
@@ -351,6 +360,28 @@ async def audit_dashboard_page():
     return FileResponse(
 
         STATIC_DIR / "audit.html"
+
+    )
+
+
+@app.get("/cases")
+
+async def cases_page():
+
+    return FileResponse(
+
+        STATIC_DIR / "cases.html"
+
+    )
+
+
+@app.get("/case")
+
+async def case_page():
+
+    return FileResponse(
+
+        STATIC_DIR / "case.html"
 
     )
 

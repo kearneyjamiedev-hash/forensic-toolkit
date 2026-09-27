@@ -54,6 +54,8 @@ from pydantic import BaseModel
 
 from app.config import (
 
+    ENABLE_API_DOCS,
+
     MAX_BULK_FILES,
 
     MAX_BULK_TOTAL_SIZE,
@@ -63,6 +65,12 @@ from app.config import (
     STATIC_DIR,
 
     UPLOAD_DIR,
+
+)
+
+from app.http_security import (
+
+    HttpSecurityMiddleware,
 
 )
 
@@ -213,6 +221,28 @@ app = FastAPI(
 
     lifespan=lifespan,
 
+    docs_url=(
+        "/docs"
+        if ENABLE_API_DOCS
+        else None
+    ),
+
+    redoc_url=(
+        "/redoc"
+        if ENABLE_API_DOCS
+        else None
+    ),
+
+    openapi_url=(
+        "/openapi.json"
+        if ENABLE_API_DOCS
+        else None
+    ),
+
+)
+
+app.add_middleware(
+    HttpSecurityMiddleware
 )
 
 # Read-only audit trail API.

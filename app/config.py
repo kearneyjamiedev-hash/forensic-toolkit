@@ -116,3 +116,51 @@ UPLOAD_DIR.mkdir(
     parents=True,
     exist_ok=True,
 )
+
+
+
+def _csv_environment(
+    name: str,
+    default: str,
+) -> tuple[str, ...]:
+
+    raw = os.getenv(
+        name,
+        default,
+    )
+
+    values = [
+        value.strip()
+        for value in raw.split(",")
+        if value.strip()
+    ]
+
+    return tuple(
+        values
+    )
+
+
+HTTP_ALLOWED_HOSTS = _csv_environment(
+    "HTTP_ALLOWED_HOSTS",
+    "127.0.0.1,localhost,::1,testserver",
+)
+
+HTTP_ALLOWED_ORIGIN_HOSTS = _csv_environment(
+    "HTTP_ALLOWED_ORIGIN_HOSTS",
+    "127.0.0.1,localhost,::1,testserver",
+)
+
+ENABLE_API_DOCS = (
+    os.getenv(
+        "ENABLE_API_DOCS",
+        "0",
+    )
+    .strip()
+    .lower()
+    in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+)

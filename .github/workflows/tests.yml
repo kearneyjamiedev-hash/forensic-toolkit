@@ -26,6 +26,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libimage-exiftool-perl
+          exiftool -ver
+
+      - name: Configure ExifTool for Linux runner
+        shell: bash
+        run: |
+          EXIFTOOL_BIN="$(command -v exiftool)"
+
+          if [ -z "$EXIFTOOL_BIN" ]; then
+            echo "ExifTool was not found on PATH."
+            exit 1
+          fi
+
+          mkdir -p tools/exiftool
+
+          # The application currently references the bundled Windows path:
+          # tools/exiftool/exiftool.exe
+          #
+          # On the Ubuntu CI runner the checked-in Windows executable cannot
+          # run, so replace only the CI working-copy file with a symlink to the
+          # native Linux ExifTool installed above.
+          rm -f tools/exiftool/exiftool.exe
+          ln -s "$EXIFTOOL_BIN" tools/exiftool/exiftool.exe
+
+          echo "CI ExifTool path:"
+          ls -l tools/exiftool/exiftool.exe
+          tools/exiftool/exiftool.exe -ver
 
       - name: Upgrade pip tooling
         run: |
@@ -52,10 +78,6 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install -r requirements-dev.txt
-
-      - name: Confirm ExifTool is available
-        run: |
-          exiftool -ver
 
       - name: Compile Python sources
         run: |

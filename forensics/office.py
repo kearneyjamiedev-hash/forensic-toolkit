@@ -1,7 +1,6 @@
 from pathlib import Path
 import zipfile
-import xml.etree.ElementTree as ET
-
+from defusedxml import ElementTree as ET
 
 MAX_XML_BYTES = (
     2

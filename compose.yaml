@@ -1,0 +1,32 @@
+services:
+  forensic-toolkit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      ENABLE_API_DOCS: "0"
+      HTTP_ALLOWED_HOSTS: "127.0.0.1,localhost,::1"
+      HTTP_ALLOWED_ORIGIN_HOSTS: "127.0.0.1,localhost,::1"
+
+    volumes:
+      - forensic_data:/app/data
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    init: true
+
+volumes:
+  forensic_data:

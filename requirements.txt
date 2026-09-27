@@ -1,8 +1,12 @@
-fastapi
-uvicorn[standard]
-python-multipart
-reportlab>=4.0,<5
-pytest>=8,<10
-pytest-cov>=5,<8
-httpx2
-defusedxml
+# Runtime dependencies.
+# Direct application dependencies are pinned so local and container installs
+# start from the same known versions.
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+reportlab==4.5.1
+pypdf==6.18.0
+Pillow==12.3.0
+pefile==2024.8.26
+olefile==0.47
+defusedxml==0.7.1

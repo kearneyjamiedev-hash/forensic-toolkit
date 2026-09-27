@@ -1,0 +1,29 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Runtime evidence / databases must never enter the image build context.
+data
+docker-data
+
+# Windows-only bundled ExifTool is not needed in the Linux image.
+tools/exiftool/exiftool.exe
+
+# Development / portfolio-only material.
+tests
+docs
+README_PASS*.txt
+*.zip
+
+# Editor/OS noise.
+.vscode
+.idea
+.DS_Store
+Thumbs.db

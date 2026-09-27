@@ -1,2 +1,0 @@
-Digital forensic integrity demonstration evidence.
-Version: original

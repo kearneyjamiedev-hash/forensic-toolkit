@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Dashboard</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <div class="eyebrow">Digital Forensic Analysis</div>
+        <h1>Audit Dashboard</h1>
+    </div>
+    <div class="topbar-actions">
+        <a href="/" class="nav-link">Dashboard</a>
+        <a href="/forensic" class="nav-link">Full Forensics</a>
+        <a href="/local" class="nav-link">Acquire Evidence</a>
+        <div class="status"><span class="status-dot"></span> Audit monitoring</div>
+    </div>
+</header>
+
+<main class="workflow-page audit-dashboard-page">
+    <section class="panel workflow-hero audit-hero">
+        <div>
+            <div class="section-label">Auditability</div>
+            <h2>Tamper-evident investigation activity</h2>
+            <p>Review evidence chains, integrity warnings, report generation and recent application activity without opening the SQLite database directly.</p>
+        </div>
+        <div class="workflow-summary-card">
+            <strong>Hash-chained audit records</strong>
+            <span>Each evidence item's events are linked with SHA-256. This is tamper-evident, not immutable storage.</span>
+        </div>
+    </section>
+
+    <section class="audit-toolbar">
+        <div>
+            <div class="eyebrow">Current state</div>
+            <h3>Audit overview</h3>
+        </div>
+        <div class="audit-toolbar-actions">
+            <input id="audit-search" class="audit-search" type="search" placeholder="Filter evidence, case, actor or event…">
+            <button id="audit-refresh-button" class="secondary-button">Refresh</button>
+        </div>
+    </section>
+
+    <section id="audit-dashboard-loading" class="panel loading-inline">
+        <div class="loader"></div><span>Loading audit database…</span>
+    </section>
+
+    <section id="audit-dashboard-error" class="panel hidden">
+        <div class="warning-box"><strong>Audit dashboard unavailable</strong><p id="audit-dashboard-error-message"></p></div>
+    </section>
+
+    <div id="audit-dashboard-content" class="hidden">
+        <section id="audit-summary-grid" class="audit-summary-grid"></section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">Evidence chains</div>
+                    <h3>Recorded evidence activity</h3>
+                    <p class="panel-description">Select an evidence item to inspect its complete audit trail.</p>
+                </div>
+                <span id="audit-chain-count" class="badge"></span>
+            </div>
+            <div class="bulk-table-wrapper">
+                <table class="bulk-table audit-evidence-table">
+                    <thead><tr><th>Integrity</th><th>Evidence</th><th>Case</th><th>Last event</th><th>Events</th><th></th></tr></thead>
+                    <tbody id="audit-evidence-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="audit-dashboard-grid">
+            <section class="panel">
+                <div class="panel-heading">
+                    <div><div class="eyebrow">Recent activity</div><h3>Latest audit events</h3></div>
+                    <span id="audit-recent-count" class="badge"></span>
+                </div>
+                <div id="audit-recent-events" class="audit-event-list"></div>
+            </section>
+
+            <section class="panel audit-inspector-panel">
+                <div class="panel-heading">
+                    <div><div class="eyebrow">Inspector</div><h3 id="audit-inspector-title">Select an evidence chain</h3><p id="audit-inspector-description" class="panel-description">Choose a row to inspect its chain and events.</p></div>
+                    <span id="audit-inspector-badge" class="badge"></span>
+                </div>
+                <div id="audit-inspector-metrics" class="audit-metrics"></div>
+                <div id="audit-inspector-events" class="audit-event-list"></div>
+            </section>
+        </section>
+    </div>
+</main>
+
+<footer><strong>Digital Forensic File Analyzer</strong><span>Audit chains provide evidence of modification; they do not make the local database immutable.</span></footer>
+<script src="/static/js/audit-ui.js?v=1"></script>
+<script src="/static/js/audit-dashboard.js?v=1"></script>
+</body>
+</html>

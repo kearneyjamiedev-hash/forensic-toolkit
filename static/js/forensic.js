@@ -304,6 +304,12 @@ function renderResults(data) {
         data.evidence?.id
         || null;
 
+    if (currentEvidenceId) {
+        window.ForensicAudit?.loadEvidenceAudit(
+            currentEvidenceId
+        );
+    }
+
     if (verifyButton) {
         verifyButton.disabled =
             !currentEvidenceId;
@@ -1569,6 +1575,10 @@ async function verifyEvidenceFile(
             "hidden"
         );
 
+        window.ForensicAudit?.loadEvidenceAudit(
+            currentEvidenceId
+        );
+
     } catch (error) {
         alert(
             (
@@ -1617,6 +1627,11 @@ function downloadReport(
             + `/report/`
             + `${format}`
         );
+
+    window.setTimeout(
+        () => window.ForensicAudit?.loadEvidenceAudit(currentEvidenceId),
+        900
+    );
 }
 
 

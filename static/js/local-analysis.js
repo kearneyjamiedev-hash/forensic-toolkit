@@ -102,6 +102,10 @@ async function initialiseAnalysisPage() {
 
         configureReportLinks();
 
+        window.ForensicAudit?.loadEvidenceAudit(
+            evidenceId
+        );
+
         workspace.classList.remove(
             "hidden"
         );
@@ -538,6 +542,10 @@ function renderAnalysis(
 
     analysisResult.classList.remove(
         "hidden"
+    );
+
+    window.ForensicAudit?.loadEvidenceAudit(
+        evidenceId
     );
 }
 

@@ -16,6 +16,7 @@
     <div class="topbar-actions">
         <a href="/" class="nav-link">Dashboard</a>
         <a href="/forensic" class="nav-link">Full Forensics</a>
+        <a href="/audit" class="nav-link">Audit</a>
         <div class="status">
             <span class="status-dot"></span>
             Security triage
@@ -159,6 +160,15 @@
                 </div>
             </details>
         </section>
+
+<section class="panel audit-evidence-panel hidden" data-audit-evidence-panel>
+<div class="panel-heading">
+<div><div class="eyebrow">Audit trail</div><h3>Tamper-evident activity</h3><p class="panel-description" data-audit-status>Audit activity will appear here after evidence actions are recorded.</p></div>
+<div class="audit-panel-actions"><span class="badge" data-audit-chain-badge></span><button class="secondary-button audit-refresh-small" data-audit-refresh>Refresh</button><a class="secondary-button button-link" href="/audit">Audit dashboard</a></div>
+</div>
+<div class="audit-metrics" data-audit-metrics></div>
+<div class="audit-event-list" data-audit-events></div>
+</section>
     </section>
 </main>
 
@@ -168,6 +178,7 @@
 </footer>
 
 <script src="/static/js/common.js?v=2"></script>
-<script src="/static/js/security.js?v=3"></script>
+<script src="/static/js/audit-ui.js?v=1"></script>
+<script src="/static/js/security.js?v=4"></script>
 </body>
 </html>

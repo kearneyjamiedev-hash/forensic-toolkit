@@ -119,6 +119,12 @@ function renderSecurityResult(data) {
             "security-artefacts-link": "artefacts.csv",
         }
     );
+
+    if (data.evidence?.id) {
+        window.ForensicAudit?.loadEvidenceAudit(
+            data.evidence.id
+        );
+    }
 }
 
 function renderChecks(checks) {

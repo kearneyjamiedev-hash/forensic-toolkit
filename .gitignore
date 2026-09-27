@@ -16,3 +16,21 @@ Thumbs.db
 data/forensics.db
 data/forensics.db-shm
 data/forensics.db-wal
+
+# Runtime forensic data
+data/audit.sqlite3
+data/audit.sqlite3-*
+data/uploads/
+
+# Generated demo evidence
+data/demo/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/

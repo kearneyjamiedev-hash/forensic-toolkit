@@ -21,6 +21,7 @@
 <a class="nav-link" href="/forensic">Full Forensics</a><a class="nav-link" href="/local">
             New acquisition
         </a>
+<a class="nav-link" href="/audit">Audit</a>
 <a class="nav-link" href="/">Dashboard</a>
 <div class="status">
 <span class="status-dot"></span>
@@ -92,6 +93,15 @@
                 </summary>
 <div class="hash-list technical-details-body" id="analysis-acquisition-hashes"></div>
 </details>
+</section>
+
+<section class="panel audit-evidence-panel hidden" data-audit-evidence-panel>
+<div class="panel-heading">
+<div><div class="eyebrow">Audit trail</div><h3>Tamper-evident activity</h3><p class="panel-description" data-audit-status>Audit activity will appear here after evidence actions are recorded.</p></div>
+<div class="audit-panel-actions"><span class="badge" data-audit-chain-badge></span><button class="secondary-button audit-refresh-small" data-audit-refresh>Refresh</button><a class="secondary-button button-link" href="/audit">Audit dashboard</a></div>
+</div>
+<div class="audit-metrics" data-audit-metrics></div>
+<div class="audit-event-list" data-audit-events></div>
 </section>
 <section class="panel workflow-panel analysis-launch-panel">
 <div>
@@ -221,6 +231,7 @@
         Examination is performed against a verified working copy.
     </span>
 </footer>
-<script src="/static/js/local-analysis.js?v=1"></script>
+<script src="/static/js/audit-ui.js?v=1"></script>
+<script src="/static/js/local-analysis.js?v=2"></script>
 </body>
 </html>

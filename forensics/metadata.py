@@ -2,7 +2,9 @@ import json
 import subprocess
 from pathlib import Path
 
-from app.config import EXIFTOOL_PATH
+from app.config import (
+    resolve_exiftool_path,
+)
 
 
 CATEGORY_MAP = {
@@ -34,22 +36,79 @@ CATEGORY_MAP = {
 }
 
 
-def _split_exiftool_key(key: str) -> tuple[str, str]:
+EXIFTOOL_TIMEOUT_SECONDS = 30
+
+
+def _split_exiftool_key(
+    key: str,
+) -> tuple[str, str]:
+
     if ":" not in key:
-        return "Other", key
+        return (
+            "Other",
+            key,
+        )
 
-    group, name = key.split(":", 1)
+    group, name = key.split(
+        ":",
+        1,
+    )
 
-    return group, name
+    return (
+        group,
+        name,
+    )
 
 
-def _category_for_group(group: str) -> str:
-    return CATEGORY_MAP.get(group, "other_metadata")
+def _category_for_group(
+    group: str,
+) -> str:
+
+    return CATEGORY_MAP.get(
+        group,
+        "other_metadata",
+    )
 
 
-def extract_metadata(file_path: Path) -> dict:
+def _empty_result(
+    *,
+    status: str,
+    error: str | None = None,
+) -> dict:
+
+    result = {
+        "status": status,
+        "categories": {},
+        "summary": {},
+        "field_count": 0,
+    }
+
+    if error:
+        result["error"] = error
+
+    return result
+
+
+def extract_metadata(
+    file_path: Path,
+) -> dict:
+
+    exiftool_path = (
+        resolve_exiftool_path()
+    )
+
+    if not exiftool_path:
+        return _empty_result(
+            status="unavailable",
+            error=(
+                "ExifTool could not be found. "
+                "Install ExifTool or configure "
+                "EXIFTOOL_PATH."
+            ),
+        )
+
     command = [
-        EXIFTOOL_PATH,
+        exiftool_path,
         "-j",
         "-G1",
         "-a",
@@ -62,59 +121,80 @@ def extract_metadata(file_path: Path) -> dict:
             command,
             capture_output=True,
             text=True,
-            timeout=30,
+            encoding="utf-8",
+            errors="replace",
+            timeout=(
+                EXIFTOOL_TIMEOUT_SECONDS
+            ),
             check=False,
+            shell=False,
         )
 
     except FileNotFoundError:
-        return {
-            "status": "unavailable",
-            "error": (
-                "ExifTool could not be found. Install ExifTool or configure "
+        return _empty_result(
+            status="unavailable",
+            error=(
+                "ExifTool could not be found. "
+                "Install ExifTool or configure "
                 "EXIFTOOL_PATH."
             ),
-            "categories": {},
-            "summary": {},
-            "field_count": 0,
-        }
+        )
+
+    except PermissionError:
+        return _empty_result(
+            status="unavailable",
+            error=(
+                "ExifTool was found but could not "
+                "be executed. Check the executable "
+                "permissions or EXIFTOOL_PATH."
+            ),
+        )
 
     except subprocess.TimeoutExpired:
-        return {
-            "status": "error",
-            "error": "ExifTool analysis timed out.",
-            "categories": {},
-            "summary": {},
-            "field_count": 0,
-        }
+        return _empty_result(
+            status="error",
+            error=(
+                "ExifTool analysis timed out."
+            ),
+        )
+
+    except OSError as error:
+        return _empty_result(
+            status="error",
+            error=(
+                "ExifTool could not be started: "
+                f"{error}"
+            ),
+        )
 
     if process.returncode != 0:
-        return {
-            "status": "error",
-            "error": process.stderr.strip() or "ExifTool returned an error.",
-            "categories": {},
-            "summary": {},
-            "field_count": 0,
-        }
+        return _empty_result(
+            status="error",
+            error=(
+                process.stderr.strip()
+                or (
+                    "ExifTool returned an error."
+                )
+            ),
+        )
 
     try:
-        records = json.loads(process.stdout)
+        records = json.loads(
+            process.stdout
+        )
 
     except json.JSONDecodeError:
-        return {
-            "status": "error",
-            "error": "ExifTool returned invalid JSON.",
-            "categories": {},
-            "summary": {},
-            "field_count": 0,
-        }
+        return _empty_result(
+            status="error",
+            error=(
+                "ExifTool returned invalid JSON."
+            ),
+        )
 
     if not records:
-        return {
-            "status": "ok",
-            "categories": {},
-            "summary": {},
-            "field_count": 0,
-        }
+        return _empty_result(
+            status="ok",
+        )
 
     raw = records[0]
 
@@ -125,13 +205,26 @@ def extract_metadata(file_path: Path) -> dict:
         if key == "SourceFile":
             continue
 
-        group, name = _split_exiftool_key(key)
+        group, name = (
+            _split_exiftool_key(
+                key
+            )
+        )
 
-        category = _category_for_group(group)
+        category = (
+            _category_for_group(
+                group
+            )
+        )
 
-        categories.setdefault(category, [])
+        categories.setdefault(
+            category,
+            [],
+        )
 
-        categories[category].append(
+        categories[
+            category
+        ].append(
             {
                 "group": group,
                 "name": name,
@@ -140,17 +233,27 @@ def extract_metadata(file_path: Path) -> dict:
         )
 
         if name == "FileType":
-            summary["file_type"] = value
+            summary[
+                "file_type"
+            ] = value
 
         elif name == "MIMEType":
-            summary["mime_type"] = value
+            summary[
+                "mime_type"
+            ] = value
 
-        elif name == "FileTypeExtension":
-            summary["file_type_extension"] = value
+        elif (
+            name
+            == "FileTypeExtension"
+        ):
+            summary[
+                "file_type_extension"
+            ] = value
 
     field_count = sum(
         len(fields)
-        for fields in categories.values()
+        for fields
+        in categories.values()
     )
 
     return {

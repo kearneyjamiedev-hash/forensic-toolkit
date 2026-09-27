@@ -6048,3 +6048,271 @@ th {
         flex-direction: column;
     }
 }
+
+
+/* =========================================================
+   AUDIT TRAIL / AUDIT DASHBOARD
+   ========================================================= */
+
+.audit-hero {
+    border-top: 3px solid #4f72d8;
+}
+
+.audit-panel-actions,
+.audit-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.audit-refresh-small {
+    padding: 8px 11px;
+}
+
+.audit-metrics,
+.audit-summary-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.audit-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 16px;
+}
+
+.audit-metric,
+.audit-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+}
+
+.audit-metric span,
+.audit-summary-card span {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.audit-metric strong,
+.audit-summary-card strong {
+    color: var(--text);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-summary-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-bottom: 18px;
+}
+
+.audit-summary-card strong {
+    font-size: 24px;
+    line-height: 1.1;
+}
+
+.audit-summary-card small {
+    color: var(--text-soft);
+    font-size: 9px;
+}
+
+.audit-summary-card.good {
+    border-color: var(--success-border);
+    background: var(--success-soft);
+}
+
+.audit-summary-card.danger {
+    border-color: var(--danger-border);
+    background: var(--danger-soft);
+}
+
+.audit-event-list {
+    display: grid;
+    gap: 8px;
+}
+
+.audit-event {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+}
+
+.audit-event-marker {
+    width: 9px;
+    height: 9px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.audit-event.verified .audit-event-marker {
+    background: var(--success);
+    box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+.audit-event.danger .audit-event-marker {
+    background: var(--danger);
+    box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.audit-event.report .audit-event-marker {
+    background: #5d64d8;
+    box-shadow: 0 0 0 3px #eef0ff;
+}
+
+.audit-event-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.audit-event-heading strong {
+    color: var(--text);
+    font-size: 10.5px;
+}
+
+.audit-event-heading span,
+.audit-event-meta {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+}
+
+.audit-event p {
+    margin: 5px 0;
+    color: var(--text-soft);
+    font-size: 9.5px;
+    line-height: 1.55;
+}
+
+.audit-event-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.audit-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 22px 0 14px;
+}
+
+.audit-toolbar h3 {
+    margin: 4px 0 0;
+}
+
+.audit-search {
+    min-width: 320px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.audit-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+    gap: 18px;
+}
+
+.audit-inspector-panel {
+    min-width: 0;
+}
+
+.audit-evidence-table td {
+    vertical-align: middle;
+}
+
+.audit-evidence-table td:nth-child(2),
+.audit-evidence-table td:nth-child(4) {
+    min-width: 180px;
+}
+
+.audit-evidence-table td > strong,
+.audit-evidence-table td > span {
+    display: block;
+}
+
+.audit-table-subtext {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 8.5px;
+}
+
+.audit-mono {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+}
+
+.audit-inspect-button {
+    padding: 7px 10px;
+}
+
+@media (max-width: 1100px) {
+    .audit-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .audit-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .audit-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .audit-toolbar-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .audit-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .audit-summary-grid,
+    .audit-metrics {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .audit-event-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 520px) {
+    .audit-summary-grid,
+    .audit-metrics {
+        grid-template-columns: 1fr;
+    }
+}

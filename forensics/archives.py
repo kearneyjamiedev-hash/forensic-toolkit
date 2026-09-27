@@ -1,9 +1,20 @@
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import zipfile
 
 
 MAX_LISTED_MEMBERS = 100
+MAX_INSPECTED_MEMBERS = 10_000
+
+MAX_DECLARED_UNCOMPRESSED_BYTES = (
+    5
+    * 1024
+    * 1024
+    * 1024
+)
+
+HIGH_COMPRESSION_RATIO = 100
 
 
 ARCHIVE_EXTENSIONS = {
@@ -36,7 +47,6 @@ def analyze_zip_archive(
     observations = []
     embedded_objects = []
 
-
     try:
 
         with zipfile.ZipFile(
@@ -45,39 +55,44 @@ def analyze_zip_archive(
 
             infos = archive.infolist()
 
+            member_count = len(
+                infos
+            )
+
+            inspected_infos = infos[
+                :MAX_INSPECTED_MEMBERS
+            ]
+
+            inspection_truncated = (
+                member_count
+                > len(inspected_infos)
+            )
 
             total_compressed = sum(
                 info.compress_size
                 for info in infos
             )
 
-
             total_uncompressed = sum(
                 info.file_size
                 for info in infos
             )
 
-
             encrypted_members = [
                 info
-                for info in infos
+                for info in inspected_infos
                 if (
                     info.flag_bits
                     & 0x1
                 )
             ]
 
-
             traversal_members = []
-
-
             nested_archives = []
-
-
             executable_members = []
+            symlink_members = []
 
-
-            for info in infos:
+            for info in inspected_infos:
 
                 name = (
                     info.filename
@@ -87,7 +102,6 @@ def analyze_zip_archive(
                     )
                 )
 
-
                 if _is_suspicious_path(
                     name
                 ):
@@ -96,13 +110,19 @@ def analyze_zip_archive(
                         name
                     )
 
+                if _is_symlink_member(
+                    info
+                ):
+
+                    symlink_members.append(
+                        name
+                    )
 
                 suffix = (
                     Path(name)
                     .suffix
                     .lower()
                 )
-
 
                 if (
                     suffix
@@ -113,7 +133,6 @@ def analyze_zip_archive(
                         name
                     )
 
-
                 if (
                     suffix
                     in EXECUTABLE_EXTENSIONS
@@ -123,9 +142,7 @@ def analyze_zip_archive(
                         name
                     )
 
-
             compression_ratio = None
-
 
             if total_compressed > 0:
 
@@ -133,7 +150,6 @@ def analyze_zip_archive(
                     total_uncompressed
                     / total_compressed
                 )
-
 
             if traversal_members:
 
@@ -153,6 +169,22 @@ def analyze_zip_archive(
                     }
                 )
 
+            if symlink_members:
+
+                observations.append(
+                    {
+                        "severity": "warning",
+                        "title": (
+                            "Symbolic-link archive members"
+                        ),
+                        "message": (
+                            f"{len(symlink_members)} "
+                            "archive member(s) are marked "
+                            "as symbolic links. Extraction "
+                            "requires destination/path review."
+                        ),
+                    }
+                )
 
             if encrypted_members:
 
@@ -163,15 +195,16 @@ def analyze_zip_archive(
                         "message": (
                             f"{len(encrypted_members)} "
                             "encrypted archive member(s) "
-                            "were identified."
+                            "were identified in the inspected "
+                            "member set."
                         ),
                     }
                 )
 
-
             if (
                 compression_ratio is not None
-                and compression_ratio > 100
+                and compression_ratio
+                > HIGH_COMPRESSION_RATIO
             ):
 
                 observations.append(
@@ -187,8 +220,49 @@ def analyze_zip_archive(
                     }
                 )
 
+            declared_size_limit_exceeded = (
+                total_uncompressed
+                > MAX_DECLARED_UNCOMPRESSED_BYTES
+            )
 
-            for info in infos[
+            if declared_size_limit_exceeded:
+
+                observations.append(
+                    {
+                        "severity": "warning",
+                        "title": (
+                            "Very large declared "
+                            "uncompressed size"
+                        ),
+                        "message": (
+                            "The archive declares more than "
+                            f"{MAX_DECLARED_UNCOMPRESSED_BYTES} "
+                            "bytes of uncompressed content. "
+                            "Do not extract it without explicit "
+                            "resource controls."
+                        ),
+                    }
+                )
+
+            if inspection_truncated:
+
+                observations.append(
+                    {
+                        "severity": "warning",
+                        "title": (
+                            "Archive member inspection "
+                            "limit reached"
+                        ),
+                        "message": (
+                            f"The archive contains {member_count} "
+                            "members. Static member-level checks "
+                            f"were limited to the first "
+                            f"{MAX_INSPECTED_MEMBERS} entries."
+                        ),
+                    }
+                )
+
+            for info in inspected_infos[
                 :MAX_LISTED_MEMBERS
             ]:
 
@@ -205,9 +279,19 @@ def analyze_zip_archive(
 
                         "compressed_size":
                             info.compress_size,
+
+                        "encrypted":
+                            bool(
+                                info.flag_bits
+                                & 0x1
+                            ),
+
+                        "symlink":
+                            _is_symlink_member(
+                                info
+                            ),
                     }
                 )
-
 
             return {
                 "format": "zip",
@@ -216,13 +300,24 @@ def analyze_zip_archive(
 
                 "properties": {
                     "member_count":
-                        len(infos),
+                        member_count,
+
+                    "members_inspected":
+                        len(
+                            inspected_infos
+                        ),
+
+                    "inspection_truncated":
+                        inspection_truncated,
 
                     "total_compressed_bytes":
                         total_compressed,
 
                     "total_uncompressed_bytes":
                         total_uncompressed,
+
+                    "declared_size_limit_exceeded":
+                        declared_size_limit_exceeded,
 
                     "compression_ratio":
                         compression_ratio,
@@ -235,6 +330,11 @@ def analyze_zip_archive(
                     "path_traversal_members":
                         len(
                             traversal_members
+                        ),
+
+                    "symlink_members":
+                        len(
+                            symlink_members
                         ),
 
                     "nested_archives":
@@ -259,10 +359,14 @@ def analyze_zip_archive(
                         "Archive members are inspected "
                         "from directory metadata only. "
                         "They are not extracted or executed."
-                    )
+                    ),
+                    (
+                        "Member-level security checks are "
+                        f"limited to the first "
+                        f"{MAX_INSPECTED_MEMBERS} entries."
+                    ),
                 ],
             }
-
 
     except zipfile.BadZipFile:
 
@@ -292,16 +396,13 @@ def _is_suspicious_path(
         name
     )
 
-
     if path.is_absolute():
 
         return True
 
-
     if ".." in path.parts:
 
         return True
-
 
     if re.match(
         r"^[A-Za-z]:",
@@ -310,5 +411,18 @@ def _is_suspicious_path(
 
         return True
 
-
     return False
+
+
+def _is_symlink_member(
+    info: zipfile.ZipInfo,
+) -> bool:
+
+    mode = (
+        info.external_attr
+        >> 16
+    )
+
+    return stat.S_ISLNK(
+        mode
+    )

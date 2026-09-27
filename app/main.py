@@ -54,11 +54,31 @@ from pydantic import BaseModel
 
 from app.config import (
 
+    MAX_BULK_FILES,
+
+    MAX_BULK_TOTAL_SIZE,
+
     MAX_UPLOAD_SIZE,
 
     STATIC_DIR,
 
     UPLOAD_DIR,
+
+)
+
+from app.ingestion import (
+
+    UploadLimitExceeded,
+
+    evidence_directory,
+
+    hash_upload_limited,
+
+    normalise_upload_filename,
+
+    safe_child_path,
+
+    save_upload_limited,
 
 )
 
@@ -1370,6 +1390,120 @@ async def health():
 
 # -----------------------------------------------------------------------------
 
+# Upload ingestion helpers
+
+# -----------------------------------------------------------------------------
+
+async def _store_persistent_upload(
+    upload: UploadFile,
+    *,
+    evidence_id: str,
+    fallback_filename: str,
+) -> tuple[str, Path, Path]:
+
+    filename = normalise_upload_filename(
+        upload.filename,
+        fallback=fallback_filename,
+    )
+
+    evidence_dir = evidence_directory(
+        UPLOAD_DIR,
+        evidence_id,
+    )
+
+    try:
+        evidence_dir.mkdir(
+            parents=True,
+            exist_ok=False,
+        )
+
+        destination = safe_child_path(
+            evidence_dir,
+            filename,
+        )
+
+        await save_upload_limited(
+            upload,
+            destination,
+            max_size=MAX_UPLOAD_SIZE,
+        )
+
+    except UploadLimitExceeded as error:
+
+        shutil.rmtree(
+            evidence_dir,
+            ignore_errors=True,
+        )
+
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "File exceeds maximum upload size."
+            ),
+        ) from error
+
+    except Exception:
+
+        shutil.rmtree(
+            evidence_dir,
+            ignore_errors=True,
+        )
+
+        raise
+
+    return (
+        filename,
+        evidence_dir,
+        destination,
+    )
+
+
+def _browser_last_modified(
+    value: str | None,
+) -> str | None:
+
+    if not value:
+        return None
+
+    try:
+        timestamp = (
+            int(value)
+            / 1000
+        )
+
+        return (
+            datetime
+            .fromtimestamp(
+                timestamp,
+                tz=timezone.utc,
+            )
+            .isoformat()
+            .replace(
+                "+00:00",
+                "Z",
+            )
+        )
+
+    except (
+        ValueError,
+        OverflowError,
+        OSError,
+    ):
+        return None
+
+
+def _remove_unpersisted_evidence(
+    evidence_directory_path: Path,
+) -> None:
+
+    shutil.rmtree(
+        evidence_directory_path,
+        ignore_errors=True,
+    )
+
+
+# -----------------------------------------------------------------------------
+
 # File analysis
 
 # -----------------------------------------------------------------------------
@@ -1390,133 +1524,19 @@ async def analyze_upload(
 
 ):
 
-    original_filename = Path(
-
-        (
-
-            file.filename
-
-            or "evidence.bin"
-
-        )
-
-        .replace(
-
-            "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-            "/",
-
-        )
-
-    ).name
-
     evidence_id = str(
-
         uuid4()
-
     )
 
-    evidence_directory = (
-
-        UPLOAD_DIR
-
-        / evidence_id
-
+    (
+        original_filename,
+        evidence_directory_path,
+        destination,
+    ) = await _store_persistent_upload(
+        file,
+        evidence_id=evidence_id,
+        fallback_filename="evidence.bin",
     )
-
-    evidence_directory.mkdir(
-
-        parents=True,
-
-        exist_ok=True,
-
-    )
-
-    destination = (
-
-        evidence_directory
-
-        / original_filename
-
-    )
-
-    total_bytes = 0
-
-    try:
-
-        with destination.open(
-
-            "wb"
-
-        ) as output:
-
-            while chunk := await file.read(
-
-                1024 * 1024
-
-            ):
-
-                total_bytes += len(
-
-                    chunk
-
-                )
-
-                if (
-
-                    total_bytes
-
-                    > MAX_UPLOAD_SIZE
-
-                ):
-
-                    raise HTTPException(
-
-                        status_code=413,
-
-                        detail=(
-
-                            "File exceeds "
-
-                            "maximum upload size."
-
-                        ),
-
-                    )
-
-                output.write(
-
-                    chunk
-
-                )
-
-    except Exception:
-
-        if destination.exists():
-
-            destination.unlink()
-
-        if evidence_directory.exists():
-
-            shutil.rmtree(
-
-                evidence_directory,
-
-                ignore_errors=True,
-
-            )
-
-        raise
-
-    finally:
-
-        await file.close()
-
-    # -------------------------------------------------------------------------
-
-    # Run forensic analysis engine
-
-    # -------------------------------------------------------------------------
 
     record_audit_event(
         event_type="ANALYSIS_STARTED",
@@ -1528,173 +1548,100 @@ async def analyze_upload(
         },
     )
 
-    result = analyze_file(
+    try:
 
-        file_path=destination,
+        result = analyze_file(
 
-        original_filename=(
+            file_path=destination,
 
-            original_filename
+            original_filename=(
 
-        ),
+                original_filename
 
-    )
+            ),
 
-    # -------------------------------------------------------------------------
+        )
 
-    # Browser-provided modification timestamp
-
-    # -------------------------------------------------------------------------
-
-    browser_last_modified = None
-
-    if browser_last_modified_ms:
-
-        try:
-
-            timestamp = (
-
-                int(
-
-                    browser_last_modified_ms
-
-                )
-
-                / 1000
-
+        browser_last_modified = (
+            _browser_last_modified(
+                browser_last_modified_ms
             )
-
-            browser_last_modified = (
-
-                datetime
-
-                .fromtimestamp(
-
-                    timestamp,
-
-                    tz=timezone.utc,
-
-                )
-
-                .isoformat()
-
-                .replace(
-
-                    "+00:00",
-
-                    "Z",
-
-                )
-
-            )
-
-        except (
-
-            ValueError,
-
-            OverflowError,
-
-            OSError,
-
-        ):
-
-            browser_last_modified = (
-
-                None
-
-            )
-
-    # -------------------------------------------------------------------------
-
-    # Evidence record
-
-    # -------------------------------------------------------------------------
-
-    result["evidence"] = {
-
-        "id":
-
-            evidence_id,
-
-        "original_filename":
-
-            original_filename,
-
-        "browser_reported_last_modified":
-
-            browser_last_modified,
-
-        "integrity_baseline_sha256":
-
-            result[
-
-                "hashes"
-
-            ][
-
-                "sha256"
-
-            ],
-
-    }
-
-    # -------------------------------------------------------------------------
-
-    # Persist analysis
-
-    # -------------------------------------------------------------------------
-
-    save_evidence_record(
-
-        evidence_id=(
-
-            evidence_id
-
-        ),
-
-        original_filename=(
-
-            original_filename
-
-        ),
-
-        stored_path=(
-
-            destination
-
-        ),
-
-        original_sha256=(
-
-            result[
-
-                "hashes"
-
-            ][
-
-                "sha256"
-
-            ]
-
-        ),
-
-        analysis_timestamp_utc=(
-
-            result[
-
-                "analysis"
-
-            ][
-
-                "timestamp_utc"
-
-            ]
-
-        ),
-
-        analysis=result,
-
-    )
+        )
+
+        result["evidence"] = {
+
+            "id":
+                evidence_id,
+
+            "original_filename":
+                original_filename,
+
+            "browser_reported_last_modified":
+                browser_last_modified,
+
+            "integrity_baseline_sha256":
+                result[
+                    "hashes"
+                ][
+                    "sha256"
+                ],
+
+        }
+
+        save_evidence_record(
+
+            evidence_id=(
+                evidence_id
+            ),
+
+            original_filename=(
+                original_filename
+            ),
+
+            stored_path=(
+                destination
+            ),
+
+            original_sha256=(
+                result[
+                    "hashes"
+                ][
+                    "sha256"
+                ]
+            ),
+
+            analysis_timestamp_utc=(
+                result[
+                    "analysis"
+                ][
+                    "timestamp_utc"
+                ]
+            ),
+
+            analysis=result,
+
+        )
+
+    except Exception as error:
+
+        record_audit_event(
+            event_type="ANALYSIS_FAILED",
+            evidence_id=evidence_id,
+            filename=original_filename,
+            outcome="failed",
+            details={
+                "analysis_scope": "browser_upload",
+                "error_type": (
+                    type(error).__name__
+                ),
+            },
+        )
+
+        _remove_unpersisted_evidence(
+            evidence_directory_path
+        )
+
+        raise
 
     record_audit_event(
         event_type="ANALYSIS_COMPLETED",
@@ -1716,7 +1663,6 @@ async def analyze_upload(
     )
 
     return result
-
 
 # -----------------------------------------------------------------------------
 
@@ -1740,127 +1686,19 @@ async def security_check(
 
 ):
 
-    original_filename = Path(
-
-        (
-
-            file.filename
-
-            or "evidence.bin"
-
-        )
-
-        .replace(
-
-            "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-            "/",
-
-        )
-
-    ).name
-
     evidence_id = str(
-
         uuid4()
-
     )
 
-    evidence_directory = (
-
-        UPLOAD_DIR
-
-        / evidence_id
-
+    (
+        original_filename,
+        evidence_directory_path,
+        destination,
+    ) = await _store_persistent_upload(
+        file,
+        evidence_id=evidence_id,
+        fallback_filename="evidence.bin",
     )
-
-    evidence_directory.mkdir(
-
-        parents=True,
-
-        exist_ok=True,
-
-    )
-
-    destination = (
-
-        evidence_directory
-
-        / original_filename
-
-    )
-
-    total_bytes = 0
-
-    try:
-
-        with destination.open(
-
-            "wb"
-
-        ) as output:
-
-            while chunk := await file.read(
-
-                1024 * 1024
-
-            ):
-
-                total_bytes += len(
-
-                    chunk
-
-                )
-
-                if (
-
-                    total_bytes
-
-                    > MAX_UPLOAD_SIZE
-
-                ):
-
-                    raise HTTPException(
-
-                        status_code=413,
-
-                        detail=(
-
-                            "File exceeds "
-
-                            "maximum upload size."
-
-                        ),
-
-                    )
-
-                output.write(
-
-                    chunk
-
-                )
-
-    except Exception:
-
-        if destination.exists():
-
-            destination.unlink()
-
-        if evidence_directory.exists():
-
-            shutil.rmtree(
-
-                evidence_directory,
-
-                ignore_errors=True,
-
-            )
-
-        raise
-
-    finally:
-
-        await file.close()
 
     record_audit_event(
         event_type="ANALYSIS_STARTED",
@@ -1872,167 +1710,110 @@ async def security_check(
         },
     )
 
-    result = analyze_file(
+    try:
 
-        file_path=destination,
+        result = analyze_file(
 
-        original_filename=(
+            file_path=destination,
 
-            original_filename
+            original_filename=(
 
-        ),
+                original_filename
 
-    )
-
-    browser_last_modified = None
-
-    if browser_last_modified_ms:
-
-        try:
-
-            timestamp = (
-
-                int(
-
-                    browser_last_modified_ms
-
-                )
-
-                / 1000
-
-            )
-
-            browser_last_modified = (
-
-                datetime
-
-                .fromtimestamp(
-
-                    timestamp,
-
-                    tz=timezone.utc,
-
-                )
-
-                .isoformat()
-
-                .replace(
-
-                    "+00:00",
-
-                    "Z",
-
-                )
-
-            )
-
-        except (
-
-            ValueError,
-
-            OverflowError,
-
-            OSError,
-
-        ):
-
-            browser_last_modified = None
-
-    result["evidence"] = {
-
-        "id":
-
-            evidence_id,
-
-        "original_filename":
-
-            original_filename,
-
-        "browser_reported_last_modified":
-
-            browser_last_modified,
-
-        "integrity_baseline_sha256":
-
-            result[
-
-                "hashes"
-
-            ][
-
-                "sha256"
-
-            ],
-
-    }
-
-    security_assessment = (
-
-        build_security_assessment(
-
-            result
+            ),
 
         )
 
-    )
+        browser_last_modified = (
+            _browser_last_modified(
+                browser_last_modified_ms
+            )
+        )
 
-    result["security_assessment"] = (
+        result["evidence"] = {
 
-        security_assessment
+            "id":
+                evidence_id,
 
-    )
+            "original_filename":
+                original_filename,
 
-    save_evidence_record(
+            "browser_reported_last_modified":
+                browser_last_modified,
 
-        evidence_id=(
+            "integrity_baseline_sha256":
+                result[
+                    "hashes"
+                ][
+                    "sha256"
+                ],
 
-            evidence_id
+        }
 
-        ),
+        security_assessment = (
+            build_security_assessment(
+                result
+            )
+        )
 
-        original_filename=(
+        result["security_assessment"] = (
+            security_assessment
+        )
 
-            original_filename
+        save_evidence_record(
 
-        ),
+            evidence_id=(
+                evidence_id
+            ),
 
-        stored_path=(
+            original_filename=(
+                original_filename
+            ),
 
-            destination
+            stored_path=(
+                destination
+            ),
 
-        ),
+            original_sha256=(
+                result[
+                    "hashes"
+                ][
+                    "sha256"
+                ]
+            ),
 
-        original_sha256=(
+            analysis_timestamp_utc=(
+                result[
+                    "analysis"
+                ][
+                    "timestamp_utc"
+                ]
+            ),
 
-            result[
+            analysis=result,
 
-                "hashes"
+        )
 
-            ][
+    except Exception as error:
 
-                "sha256"
+        record_audit_event(
+            event_type="ANALYSIS_FAILED",
+            evidence_id=evidence_id,
+            filename=original_filename,
+            outcome="failed",
+            details={
+                "analysis_scope": "security_check",
+                "error_type": (
+                    type(error).__name__
+                ),
+            },
+        )
 
-            ]
+        _remove_unpersisted_evidence(
+            evidence_directory_path
+        )
 
-        ),
-
-        analysis_timestamp_utc=(
-
-            result[
-
-                "analysis"
-
-            ][
-
-                "timestamp_utc"
-
-            ]
-
-        ),
-
-        analysis=result,
-
-    )
+        raise
 
     record_audit_event(
         event_type="ANALYSIS_COMPLETED",
@@ -2105,7 +1886,6 @@ async def security_check(
 
     return result
 
-
 # -----------------------------------------------------------------------------
 
 # Evidence integrity verification
@@ -2154,83 +1934,29 @@ async def verify_file(
 
         )
 
-    selected_filename = Path(
-
-        (
-
-            file.filename
-
-            or "selected-file"
-
-        )
-
-        .replace(
-
-            "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-            "/",
-
-        )
-
-    ).name
-
-    sha256 = hashlib.sha256()
-
-    total_bytes = 0
+    selected_filename = normalise_upload_filename(
+        file.filename,
+        fallback="selected-file",
+    )
 
     try:
+        (
+            current_sha256,
+            _verification_size,
+        ) = await hash_upload_limited(
+            file,
+            max_size=MAX_UPLOAD_SIZE,
+        )
 
-        while chunk := await file.read(
+    except UploadLimitExceeded as error:
 
-            1024 * 1024
-
-        ):
-
-            total_bytes += len(
-
-                chunk
-
-            )
-
-            if (
-
-                total_bytes
-
-                > MAX_UPLOAD_SIZE
-
-            ):
-
-                raise HTTPException(
-
-                    status_code=413,
-
-                    detail=(
-
-                        "Verification file "
-
-                        "exceeds maximum "
-
-                        "upload size."
-
-                    ),
-
-                )
-
-            sha256.update(
-
-                chunk
-
-            )
-
-    finally:
-
-        await file.close()
-
-    current_sha256 = (
-
-        sha256.hexdigest()
-
-    )
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "Verification file exceeds "
+                "maximum upload size."
+            ),
+        ) from error
 
     expected_sha256 = (
 
@@ -2411,45 +2137,15 @@ async def compare_files(
 
         )
 
-        filename_a = Path(
+        filename_a = normalise_upload_filename(
+            file_a.filename,
+            fallback="file-a",
+        )
 
-            (
-
-                file_a.filename
-
-                or "file-a"
-
-            )
-
-            .replace(
-
-                "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-                "/",
-
-            )
-
-        ).name
-
-        filename_b = Path(
-
-            (
-
-                file_b.filename
-
-                or "file-b"
-
-            )
-
-            .replace(
-
-                "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-                "/",
-
-            )
-
-        ).name
+        filename_b = normalise_upload_filename(
+            file_b.filename,
+            fallback="file-b",
+        )
 
         await _save_temporary_upload(
 
@@ -2511,8 +2207,6 @@ async def compare_files(
 
 # -----------------------------------------------------------------------------
 
-MAX_BULK_FILES = 25
-
 @app.post("/api/bulk-analyze")
 
 async def bulk_analyze(
@@ -2560,6 +2254,7 @@ async def bulk_analyze(
         )
 
     analyses = []
+    total_request_bytes = 0
 
     with TemporaryDirectory() as temp_dir:
 
@@ -2575,25 +2270,10 @@ async def bulk_analyze(
 
         ):
 
-            filename = Path(
-
-                (
-
-                    upload.filename
-
-                    or f"file-{index}"
-
-                )
-
-                .replace(
-
-                    "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",
-
-                    "/",
-
-                )
-
-            ).name
+            filename = normalise_upload_filename(
+                upload.filename,
+                fallback=f"file-{index}",
+            )
 
             destination = (
 
@@ -2603,13 +2283,30 @@ async def bulk_analyze(
 
             )
 
-            await _save_temporary_upload(
+            saved_bytes = await _save_temporary_upload(
 
                 upload,
 
                 destination,
 
             )
+
+            total_request_bytes += (
+                saved_bytes
+            )
+
+            if (
+                total_request_bytes
+                > MAX_BULK_TOTAL_SIZE
+            ):
+
+                raise HTTPException(
+                    status_code=413,
+                    detail=(
+                        "Combined bulk upload size "
+                        "exceeds the permitted request limit."
+                    ),
+                )
 
             analysis = analyze_file(
 
@@ -2659,61 +2356,24 @@ async def _save_temporary_upload(
 
     destination: Path,
 
-) -> None:
-
-    total_bytes = 0
+) -> int:
 
     try:
+        return await save_upload_limited(
+            upload,
+            destination,
+            max_size=MAX_UPLOAD_SIZE,
+        )
 
-        with destination.open(
+    except UploadLimitExceeded as error:
 
-            "wb"
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "File exceeds maximum upload size."
+            ),
+        ) from error
 
-        ) as output:
-
-            while chunk := await upload.read(
-
-                1024 * 1024
-
-            ):
-
-                total_bytes += len(
-
-                    chunk
-
-                )
-
-                if (
-
-                    total_bytes
-
-                    > MAX_UPLOAD_SIZE
-
-                ):
-
-                    raise HTTPException(
-
-                        status_code=413,
-
-                        detail=(
-
-                            "File exceeds "
-
-                            "maximum upload size."
-
-                        ),
-
-                    )
-
-                output.write(
-
-                    chunk
-
-                )
-
-    finally:
-
-        await upload.close()
 
 # -----------------------------------------------------------------------------
 

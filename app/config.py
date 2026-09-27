@@ -103,6 +103,14 @@ MAX_UPLOAD_SIZE = (
     * 1024
 )  # 250 MB
 
+MAX_BULK_FILES = 25
+
+MAX_BULK_TOTAL_SIZE = (
+    500
+    * 1024
+    * 1024
+)  # 500 MB per bulk request
+
 
 UPLOAD_DIR.mkdir(
     parents=True,

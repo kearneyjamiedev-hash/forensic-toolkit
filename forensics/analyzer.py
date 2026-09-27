@@ -5,6 +5,10 @@ from forensics.filesystem import (
     get_filesystem_metadata
 )
 
+from forensics.format_analysis import (
+    analyze_format
+)
+
 from forensics.hashing import (
     calculate_hashes
 )
@@ -65,6 +69,20 @@ def analyze_file(
 
     metadata = extract_metadata(
         file_path
+    )
+
+
+    # Always run the format dispatcher.
+    #
+    # Unsupported/general formats return a standard
+    # "not_applicable" result, while supported formats such as
+    # PDF, Office, images, ZIP archives and PE files return their
+    # dedicated structured analysis.
+    format_analysis = analyze_format(
+        file_path=file_path,
+        original_filename=(
+            original_filename
+        ),
     )
 
 
@@ -244,6 +262,10 @@ def analyze_file(
 
         "artefacts":
             artefacts,
+
+
+        "format_analysis":
+            format_analysis,
 
 
         "warnings":

@@ -8,22 +8,166 @@
 </head>
 <body>
 <header class="topbar">
-    <div class="brand"><div class="eyebrow">Digital Forensic Analysis</div><h1>Quick Security Check</h1></div>
-    <div class="topbar-actions"><a href="/" class="nav-link">Dashboard</a><a href="/forensic" class="nav-link">Full Forensics</a><div class="status"><span class="status-dot"></span> Security triage</div></div>
+    <div class="brand">
+        <div class="eyebrow">Digital Forensic Analysis</div>
+        <h1>Quick Security Check</h1>
+    </div>
+
+    <div class="topbar-actions">
+        <a href="/" class="nav-link">Dashboard</a>
+        <a href="/forensic" class="nav-link">Full Forensics</a>
+        <div class="status">
+            <span class="status-dot"></span>
+            Security triage
+        </div>
+    </div>
 </header>
-<main class="workflow-page">
-    <section class="panel workflow-hero">
-        <div><div class="section-label">Security triage</div><h2>Is this file suspicious?</h2><p>A focused security view will convert static-analysis signals into explainable findings without claiming that a file is guaranteed safe.</p></div>
-        <div class="workflow-summary-card"><strong>Workflow shell ready</strong><span>Backend interpretation layer is the next implementation step</span></div>
+
+<main class="workflow-page focused-workflow-page">
+    <section class="panel workflow-hero security-hero">
+        <div>
+            <div class="section-label">Security triage</div>
+            <h2>Check a file for suspicious indicators</h2>
+            <p>
+                Run the forensic engine and surface the findings most relevant to
+                security review: file-type mismatches, parser warnings, command
+                strings, executable references and format-specific observations.
+            </p>
+        </div>
+
+        <div class="workflow-summary-card">
+            <strong>Static analysis only</strong>
+            <span>This workflow does not execute the file or guarantee that it is safe.</span>
+        </div>
     </section>
-    <section class="panel workflow-panel placeholder-workflow-panel">
-        <div class="eyebrow">Next implementation</div>
-        <h3>This workspace has been separated from the general analyzer.</h3>
-        <p class="panel-description">The route and dedicated view are now in place. The next pass will connect task-specific findings and reporting without changing the core forensic engine.</p>
-        <a href="/forensic" class="secondary-button button-link">Use full forensic examination for now</a>
+
+    <section class="panel workflow-panel">
+        <div class="panel-heading">
+            <div>
+                <div class="eyebrow">Input</div>
+                <h3>Select a file to check</h3>
+                <p class="panel-description">
+                    The complete forensic engine runs in the background, while this
+                    page only presents security-relevant findings.
+                </p>
+            </div>
+        </div>
+
+        <div class="focused-upload-layout">
+            <label id="security-drop-zone" class="drop-zone compact-drop-zone">
+                <input id="security-file-input" type="file" hidden>
+                <span class="upload-icon">+</span>
+                <strong>Select a file</strong>
+                <span>or drag and drop it here</span>
+            </label>
+
+            <div class="focused-upload-actions">
+                <div id="security-selected-file" class="selected-file"></div>
+                <button id="security-check-button" class="primary-button" disabled>
+                    Run security check
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="security-loading" class="panel hidden loading-panel">
+        <div class="loader"></div>
+        <div>
+            <strong>Checking file</strong>
+            <span>Running static forensic analysis and evaluating security indicators...</span>
+        </div>
+    </section>
+
+    <section id="security-results" class="hidden">
+        <section class="panel security-disposition-panel">
+            <div class="security-disposition-grid">
+                <div>
+                    <div class="eyebrow">Triage result</div>
+                    <h2 id="security-disposition-title">Security assessment</h2>
+                    <p id="security-disposition-summary" class="panel-description"></p>
+                </div>
+
+                <div class="security-disposition-side">
+                    <span id="security-disposition-badge" class="badge"></span>
+                    <span id="security-filename" class="security-file-name"></span>
+                </div>
+            </div>
+
+            <div class="security-disclaimer">
+                A clean static triage result does not prove that a file is safe.
+                Packed, encrypted, obfuscated or runtime-only behaviour may not be visible here.
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">Checks</div>
+                    <h3>Security checks performed</h3>
+                    <p class="panel-description">
+                        Each check explains what the analyzer observed rather than assigning
+                        an opaque risk score.
+                    </p>
+                </div>
+            </div>
+
+            <div id="security-checks" class="security-check-list"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">Findings</div>
+                    <h3>Items requiring attention</h3>
+                    <p class="panel-description">
+                        Findings are prioritised by severity, but still require analyst context.
+                    </p>
+                </div>
+                <span id="security-finding-count" class="badge"></span>
+            </div>
+
+            <div id="security-findings" class="security-findings"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="eyebrow">Technical context</div>
+                    <h3>File identity and evidence baseline</h3>
+                </div>
+            </div>
+
+            <div id="security-overview" class="overview-grid"></div>
+
+            <details class="technical-details">
+                <summary>View SHA-256 and technical exports</summary>
+
+                <div class="technical-details-body">
+                    <div id="security-hashes" class="hash-list"></div>
+
+                    <div class="report-actions security-report-actions">
+                        <a id="security-pdf-link" class="secondary-button button-link disabled-link" href="#" aria-disabled="true">
+                            Full forensic PDF
+                        </a>
+                        <a id="security-json-link" class="secondary-button button-link disabled-link" href="#" aria-disabled="true">
+                            JSON analysis
+                        </a>
+                        <a id="security-artefacts-link" class="secondary-button button-link disabled-link" href="#" aria-disabled="true">
+                            Artefacts CSV
+                        </a>
+                    </div>
+                </div>
+            </details>
+        </section>
     </section>
 </main>
-<footer><strong>Digital Forensic File Analyzer</strong><span>Focused workflows reuse the shared forensic analysis engine.</span></footer>
-<script src="/static/js/security.js?v=1"></script>
+
+<footer>
+    <strong>Digital Forensic File Analyzer</strong>
+    <span>Quick Security Check is a static triage workflow, not a malware sandbox.</span>
+</footer>
+
+<script src="/static/js/common.js?v=2"></script>
+<script src="/static/js/security.js?v=3"></script>
 </body>
 </html>
